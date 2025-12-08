@@ -899,6 +899,7 @@ export default function App() {
             inventoryData={inventoryData}
             activityLogs={activityLogs}
             onNavigate={handleNavigate}
+            onLogActivity={(log) => setActivityLogs(prev => [...prev, log])}
           />
         )}
 

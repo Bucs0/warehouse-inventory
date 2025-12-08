@@ -1,5 +1,5 @@
 // ============================================
-// UPDATED Login.jsx - LOGIN WITH USERNAME OR EMAIL
+// COMPLETE UPDATED Login.jsx - FIXED LOGIN & APPROVAL FLOW
 // ============================================
 
 import { useState, useEffect } from 'react'
@@ -32,26 +32,27 @@ export default function Login({ onLogin }) {
   })
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [pendingUsers, setPendingUsers] = useState([])
   const [approvedUsers, setApprovedUsers] = useState([])
 
-  // Load users from localStorage on mount
+  // ✅ FIXED: Load approved users from localStorage
   useEffect(() => {
-    const savedPending = localStorage.getItem('pendingUsers')
     const savedApproved = localStorage.getItem('approvedUsers')
-    
-    if (savedPending) setPendingUsers(JSON.parse(savedPending))
-    if (savedApproved) setApprovedUsers(JSON.parse(savedApproved))
+    if (savedApproved) {
+      setApprovedUsers(JSON.parse(savedApproved))
+    }
   }, [])
 
-  // Save users to localStorage
+  // ✅ FIXED: Poll for changes every 2 seconds to detect approvals
   useEffect(() => {
-    localStorage.setItem('pendingUsers', JSON.stringify(pendingUsers))
-  }, [pendingUsers])
-
-  useEffect(() => {
-    localStorage.setItem('approvedUsers', JSON.stringify(approvedUsers))
-  }, [approvedUsers])
+    const interval = setInterval(() => {
+      const savedApproved = localStorage.getItem('approvedUsers')
+      if (savedApproved) {
+        setApprovedUsers(JSON.parse(savedApproved))
+      }
+    }, 2000)
+    
+    return () => clearInterval(interval)
+  }, [])
 
   const handleLogin = () => {
     setError('')
@@ -67,26 +68,34 @@ export default function Login({ onLogin }) {
         return
       }
 
-      // Check approved staff users (username or email)
-      const user = approvedUsers.find(u => 
+      // ✅ FIXED: Check approved staff users from localStorage
+      const savedApproved = localStorage.getItem('approvedUsers')
+      const currentApprovedUsers = savedApproved ? JSON.parse(savedApproved) : []
+      
+      const user = currentApprovedUsers.find(u => 
         (u.username.toLowerCase() === input || u.email.toLowerCase() === input) 
         && u.password === loginData.password
       )
       
       if (user) {
         onLogin(user)
-      } else {
-        // Check if user is in pending list
-        const pendingUser = pendingUsers.find(u => 
-          u.username.toLowerCase() === input || u.email.toLowerCase() === input
-        )
-        if (pendingUser) {
-          setError('Your account is pending admin approval. Please wait for approval.')
-        } else {
-          setError('Invalid username/email or password')
-        }
-        setIsLoading(false)
+        return
       }
+
+      // ✅ FIXED: Check if user is still pending
+      const savedPending = localStorage.getItem('pendingUsers')
+      const pendingUsers = savedPending ? JSON.parse(savedPending) : []
+      
+      const pendingUser = pendingUsers.find(u => 
+        u.username.toLowerCase() === input || u.email.toLowerCase() === input
+      )
+      
+      if (pendingUser) {
+        setError('Your account is pending admin approval. Please wait for approval.')
+      } else {
+        setError('Invalid username/email or password')
+      }
+      setIsLoading(false)
     }, 500)
   }
 
@@ -114,8 +123,13 @@ export default function Login({ onLogin }) {
     }
 
     // Check if username already exists
-    const usernameExists = approvedUsers.some(u => u.username === signupData.username) ||
-                          pendingUsers.some(u => u.username === signupData.username) ||
+    const savedApproved = localStorage.getItem('approvedUsers')
+    const savedPending = localStorage.getItem('pendingUsers')
+    const currentApprovedUsers = savedApproved ? JSON.parse(savedApproved) : []
+    const currentPendingUsers = savedPending ? JSON.parse(savedPending) : []
+
+    const usernameExists = currentApprovedUsers.some(u => u.username === signupData.username) ||
+                          currentPendingUsers.some(u => u.username === signupData.username) ||
                           signupData.username === ADMIN_ACCOUNT.username
 
     if (usernameExists) {
@@ -124,8 +138,8 @@ export default function Login({ onLogin }) {
     }
 
     // Check if email already exists
-    const emailExists = approvedUsers.some(u => u.email === signupData.email) ||
-                       pendingUsers.some(u => u.email === signupData.email) ||
+    const emailExists = currentApprovedUsers.some(u => u.email === signupData.email) ||
+                       currentPendingUsers.some(u => u.email === signupData.email) ||
                        signupData.email === ADMIN_ACCOUNT.email
 
     if (emailExists) {
@@ -144,7 +158,10 @@ export default function Login({ onLogin }) {
       signupDate: new Date().toLocaleDateString('en-PH')
     }
 
-    setPendingUsers([...pendingUsers, newUser])
+    // Add to pending users
+    const updatedPending = [...currentPendingUsers, newUser]
+    localStorage.setItem('pendingUsers', JSON.stringify(updatedPending))
+    
     setMode('pendingApproval')
     setSignupData({ username: '', email: '', password: '', confirmPassword: '', name: '' })
   }
