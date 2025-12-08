@@ -6,8 +6,8 @@
 // ✅ STEP 1: Replace these with your EmailJS credentials
 // Get them from: https://www.emailjs.com/
 const EMAILJS_SERVICE_ID = 'service_an2ngeg' // e.g., 'service_abc123'
-const EMAILJS_TEMPLATE_ID_LOW_STOCK = 'YOUR_LOW_STOCK_TEMPLATE_ID' // e.g., 'template_lowstock'
-const EMAILJS_TEMPLATE_ID_APPOINTMENT = 'YOUR_APPOINTMENT_TEMPLATE_ID' // e.g., 'template_appointment'
+const EMAILJS_TEMPLATE_ID_LOW_STOCK = 'template_l3vz6al' // e.g., 'template_lowstock'
+const EMAILJS_TEMPLATE_ID_APPOINTMENT = 'template_x3a2ecb' // e.g., 'template_appointment'
 const EMAILJS_PUBLIC_KEY = 'Lk9FwnFHIYBdz8d-d' // e.g., 'abcdef123456'
 
 // Load EmailJS library
