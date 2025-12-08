@@ -1,7 +1,7 @@
 // ============================================
-// FILE: src/components/AppointmentsPage.jsx
+// FILE: src/components/AppointmentsPage.jsx (UPDATED - EmailJS Ready)
 // ============================================
-// Appointment Scheduling - Schedule restock appointments with suppliers
+// ✅ ADDED: Email notifications for appointment confirmations to suppliers
 
 import { useState } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card'
@@ -12,6 +12,9 @@ import { Input } from './ui/input'
 import ScheduleAppointmentDialog from './ScheduleAppointmentDialog'
 import EditAppointmentDialog from './EditAppointmentDialog'
 import ViewAppointmentDialog from './ViewAppointmentDialog'
+
+// ✅ NEW: Import email service
+import { sendAppointmentEmail } from '../lib/emailService'
 
 export default function AppointmentsPage({ 
   user, 
@@ -24,8 +27,8 @@ export default function AppointmentsPage({
   onCompleteAppointment 
 }) {
   const [searchTerm, setSearchTerm] = useState('')
-  const [filterStatus, setFilterStatus] = useState('all') // all, pending, confirmed, completed, cancelled
-  const [viewMode, setViewMode] = useState('list') // list or calendar
+  const [filterStatus, setFilterStatus] = useState('all')
+  const [viewMode, setViewMode] = useState('list')
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false)
   const [editingAppointment, setEditingAppointment] = useState(null)
   const [viewingAppointment, setViewingAppointment] = useState(null)
@@ -40,7 +43,7 @@ export default function AppointmentsPage({
     const matchesStatus = filterStatus === 'all' || appointment.status === filterStatus
 
     return matchesSearch && matchesStatus
-  }).sort((a, b) => new Date(a.date) - new Date(b.date)) // Sort by date
+  }).sort((a, b) => new Date(a.date) - new Date(b.date))
 
   // Calculate statistics
   const pendingCount = appointments.filter(a => a.status === 'pending').length
@@ -48,7 +51,6 @@ export default function AppointmentsPage({
   const completedCount = appointments.filter(a => a.status === 'completed').length
   const cancelledCount = appointments.filter(a => a.status === 'cancelled').length
 
-  // Get upcoming appointments (next 7 days)
   const today = new Date()
   const nextWeek = new Date(today)
   nextWeek.setDate(today.getDate() + 7)
@@ -58,7 +60,63 @@ export default function AppointmentsPage({
     return appointmentDate >= today && appointmentDate <= nextWeek && a.status !== 'completed' && a.status !== 'cancelled'
   }).length
 
-  // Handle actions
+  // ✅ NEW: Enhanced schedule handler with email notification
+  const handleScheduleWithEmail = async (appointment) => {
+    // First, save the appointment
+    onScheduleAppointment(appointment)
+
+    // Then, try to send email notification to supplier
+    const supplier = suppliers.find(s => s.id === appointment.supplierId)
+    
+    if (supplier && supplier.contactEmail) {
+      console.log('📧 Sending appointment confirmation email to:', supplier.contactEmail)
+      
+      const emailResult = await sendAppointmentEmail(appointment, supplier)
+      
+      if (emailResult.success) {
+        console.log('✅ Email sent successfully to supplier')
+        // Optional: Show success notification to user
+        alert(`✅ Appointment scheduled and confirmation email sent to ${supplier.supplierName}!`)
+      } else {
+        console.error('❌ Failed to send email:', emailResult.error)
+        // Still show success for appointment, but warn about email
+        alert(`✅ Appointment scheduled successfully, but email notification failed to send. Please contact the supplier manually.`)
+      }
+    } else {
+      console.warn('⚠️ No email address found for supplier')
+      alert(`✅ Appointment scheduled! Note: Supplier has no email address on file for automatic notification.`)
+    }
+  }
+
+  // ✅ NEW: Enhanced edit handler with email notification
+  const handleEditWithEmail = async (updatedAppointment) => {
+    // First, save the updated appointment
+    onEditAppointment(updatedAppointment)
+
+    // If appointment is being confirmed, send email
+    const originalAppointment = appointments.find(a => a.id === updatedAppointment.id)
+    const statusChanged = originalAppointment.status !== updatedAppointment.status
+    const isNowConfirmed = updatedAppointment.status === 'confirmed'
+
+    if (statusChanged && isNowConfirmed) {
+      const supplier = suppliers.find(s => s.id === updatedAppointment.supplierId)
+      
+      if (supplier && supplier.contactEmail) {
+        console.log('📧 Sending confirmation email for updated appointment to:', supplier.contactEmail)
+        
+        const emailResult = await sendAppointmentEmail(updatedAppointment, supplier)
+        
+        if (emailResult.success) {
+          console.log('✅ Confirmation email sent successfully')
+          alert(`✅ Appointment updated and confirmation email sent to ${supplier.supplierName}!`)
+        } else {
+          console.error('❌ Failed to send confirmation email:', emailResult.error)
+          alert(`✅ Appointment updated, but confirmation email failed to send.`)
+        }
+      }
+    }
+  }
+
   const handleComplete = (appointment) => {
     if (window.confirm(`Mark appointment with ${appointment.supplierName} as completed?`)) {
       onCompleteAppointment(appointment.id)
@@ -71,7 +129,6 @@ export default function AppointmentsPage({
     }
   }
 
-  // Format date for display
   const formatDate = (dateString) => {
     const date = new Date(dateString)
     return date.toLocaleDateString('en-PH', { 
@@ -81,7 +138,6 @@ export default function AppointmentsPage({
     })
   }
 
-  // Check if appointment is overdue
   const isOverdue = (appointment) => {
     const appointmentDate = new Date(appointment.date)
     return appointmentDate < today && appointment.status !== 'completed' && appointment.status !== 'cancelled'
@@ -98,7 +154,6 @@ export default function AppointmentsPage({
           </p>
         </div>
 
-        {/* View mode toggle */}
         <div className="flex items-center gap-2">
           <Button
             variant={viewMode === 'list' ? 'default' : 'outline'}
@@ -214,7 +269,6 @@ export default function AppointmentsPage({
               {viewMode === 'list' ? 'Appointments List' : 'Calendar View'}
             </CardTitle>
             
-            {/* Schedule button - Admin only */}
             {user.role === 'Admin' && (
               <Button onClick={() => setIsScheduleDialogOpen(true)}>
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -225,7 +279,6 @@ export default function AppointmentsPage({
             )}
           </div>
 
-          {/* Search and filter row */}
           <div className="flex flex-col md:flex-row gap-4 mt-4">
             <div className="flex-1">
               <Input
@@ -271,7 +324,6 @@ export default function AppointmentsPage({
 
         <CardContent>
           {viewMode === 'list' ? (
-            // List View
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
@@ -379,7 +431,6 @@ export default function AppointmentsPage({
               </Table>
             </div>
           ) : (
-            // Calendar View (Simple)
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredAppointments.map((appointment) => (
                 <Card 
@@ -452,14 +503,14 @@ export default function AppointmentsPage({
         </CardContent>
       </Card>
 
-      {/* Dialogs */}
+      {/* ✅ UPDATED: Dialogs now use email-enabled handlers */}
       <ScheduleAppointmentDialog
         open={isScheduleDialogOpen}
         onOpenChange={setIsScheduleDialogOpen}
         suppliers={suppliers}
         inventoryData={inventoryData}
         user={user}
-        onSchedule={onScheduleAppointment}
+        onSchedule={handleScheduleWithEmail}
       />
 
       {editingAppointment && (
@@ -469,7 +520,7 @@ export default function AppointmentsPage({
           appointment={editingAppointment}
           suppliers={suppliers}
           inventoryData={inventoryData}
-          onEdit={onEditAppointment}
+          onEdit={handleEditWithEmail}
         />
       )}
 
