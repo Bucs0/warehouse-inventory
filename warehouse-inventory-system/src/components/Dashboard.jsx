@@ -1,19 +1,65 @@
-// Updated Dashboard component - removed redundant navigation buttons
-// No "View Full Inventory" button for Staff
-// Removed "Manage Inventory" and "Activity Logs" quick action cards
+// ============================================
+// UPDATED Dashboard.jsx - WITH APPROVAL BUTTON FOR ADMIN
+// ============================================
 
+import { useState, useEffect } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
 
 export default function Dashboard({ user, inventoryData, activityLogs, onNavigate }) {
-  // Calculate statistics from inventory data
+  const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false)
+  const [pendingUsers, setPendingUsers] = useState([])
+  const [approvedUsers, setApprovedUsers] = useState([])
+
+  // Load users from localStorage
+  useEffect(() => {
+    const loadUsers = () => {
+      const savedPending = localStorage.getItem('pendingUsers')
+      const savedApproved = localStorage.getItem('approvedUsers')
+      
+      if (savedPending) setPendingUsers(JSON.parse(savedPending))
+      if (savedApproved) setApprovedUsers(JSON.parse(savedApproved))
+    }
+    
+    loadUsers()
+    
+    // Poll for changes every 2 seconds
+    const interval = setInterval(loadUsers, 2000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Save users to localStorage
+  useEffect(() => {
+    localStorage.setItem('pendingUsers', JSON.stringify(pendingUsers))
+  }, [pendingUsers])
+
+  useEffect(() => {
+    localStorage.setItem('approvedUsers', JSON.stringify(approvedUsers))
+  }, [approvedUsers])
+
+  const handleApproveUser = (userId) => {
+    const user = pendingUsers.find(u => u.id === userId)
+    if (user) {
+      const approvedUser = { ...user, status: 'approved' }
+      setApprovedUsers([...approvedUsers, approvedUser])
+      setPendingUsers(pendingUsers.filter(u => u.id !== userId))
+    }
+  }
+
+  const handleRejectUser = (userId) => {
+    if (window.confirm('Are you sure you want to reject this user?')) {
+      setPendingUsers(pendingUsers.filter(u => u.id !== userId))
+    }
+  }
+
+  // Calculate statistics
   const totalItems = inventoryData.length
   const lowStockItems = inventoryData.filter(item => item.quantity <= item.reorderLevel).length
   const damagedItems = inventoryData.filter(item => item.damagedStatus === 'Damaged').length
   const totalValue = inventoryData.reduce((sum, item) => sum + (item.quantity * (item.price || 0)), 0)
 
-  // Get recent activities (last 5)
   const recentActivities = activityLogs.slice(-5).reverse()
 
   return (
@@ -27,20 +73,37 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
             <Badge variant="outline" className="ml-2">{user.role}</Badge>
           </p>
         </div>
-        {/* Only show "View Full Inventory" button for Admin */}
-        {user.role === 'Admin' && (
-          <Button variant="outline" onClick={() => onNavigate('inventory')}>
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-            View Full Inventory
-          </Button>
-        )}
+        
+        <div className="flex gap-2">
+          {/* Admin: Show approval button with badge */}
+          {user.role === 'Admin' && pendingUsers.length > 0 && (
+            <Button 
+              variant="outline"
+              onClick={() => setIsApprovalDialogOpen(true)}
+              className="relative"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+              User Approvals
+              <Badge variant="warning" className="ml-2">{pendingUsers.length}</Badge>
+            </Button>
+          )}
+          
+          {/* Admin: Show "View Full Inventory" button */}
+          {user.role === 'Admin' && (
+            <Button variant="outline" onClick={() => onNavigate('inventory')}>
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+              View Full Inventory
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Statistics cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Items Card */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -57,7 +120,6 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
           </CardContent>
         </Card>
 
-        {/* Low Stock Card */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -74,7 +136,6 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
           </CardContent>
         </Card>
 
-        {/* Damaged Items Card */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -91,7 +152,6 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
           </CardContent>
         </Card>
 
-        {/* Total Value Card */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -111,7 +171,7 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
         </Card>
       </div>
 
-      {/* Recent Activities Section */}
+      {/* Recent Activities */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -130,7 +190,6 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
             <div className="space-y-4">
               {recentActivities.map((log) => (
                 <div key={log.id} className="flex items-start gap-4 pb-4 border-b last:border-0 last:pb-0">
-                  {/* Icon based on action */}
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                     log.action === 'Added' ? 'bg-green-100' :
                     log.action === 'Edited' ? 'bg-blue-100' :
@@ -153,7 +212,6 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
                     )}
                   </div>
 
-                  {/* Activity details */}
                   <div className="flex-1">
                     <p className="font-medium">{log.itemName}</p>
                     <p className="text-sm text-muted-foreground">
@@ -161,7 +219,6 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
                     </p>
                   </div>
 
-                  {/* Action badge */}
                   <Badge variant={
                     log.action === 'Added' ? 'success' :
                     log.action === 'Edited' ? 'default' :
@@ -176,22 +233,94 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
         </CardContent>
       </Card>
 
-      {/* Quick Actions - Only show "Generate Reports" for now */}
-      <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      {/* Approval Dialog */}
+      <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Staff Approval Requests</DialogTitle>
+            <p className="text-sm text-muted-foreground mt-2">
+              Review and approve or reject staff signup requests
+            </p>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4">
+            {pendingUsers.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <svg className="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
+                <p className="font-medium">No pending approvals</p>
+                <p className="text-sm mt-1">All staff signup requests have been processed</p>
               </div>
-              <h3 className="font-semibold mb-1">Generate Reports</h3>
-              <p className="text-sm text-muted-foreground">Coming Soon</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  {pendingUsers.length} pending approval(s)
+                </p>
+                
+                {pendingUsers.map(user => (
+                  <div key={user.id} className="border rounded-lg p-4 bg-yellow-50 border-yellow-200">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-lg">{user.name}</h3>
+                          <Badge variant="warning">Pending</Badge>
+                        </div>
+                        <div className="space-y-1 text-sm">
+                          <p><strong>Username:</strong> {user.username}</p>
+                          <p><strong>Email:</strong> {user.email}</p>
+                          <p><strong>Role:</strong> {user.role}</p>
+                          <p><strong>Signup Date:</strong> {user.signupDate}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleApproveUser(user.id)}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleRejectUser(user.id)}
+                        >
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                          Reject
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+
+            {/* Approved Users List */}
+            {approvedUsers.length > 0 && (
+              <div className="mt-8 pt-8 border-t">
+                <h3 className="font-semibold mb-4">Approved Staff Members ({approvedUsers.length})</h3>
+                <div className="space-y-2">
+                  {approvedUsers.map(user => (
+                    <div key={user.id} className="border rounded p-3 bg-green-50 border-green-200 flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{user.name}</p>
+                        <p className="text-sm text-muted-foreground">@{user.username} • {user.email}</p>
+                      </div>
+                      <Badge variant="success">Approved</Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
