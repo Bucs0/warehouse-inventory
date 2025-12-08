@@ -10,7 +10,8 @@ import DamagedItemsPage from './components/DamagedItemsPage'
 import ActivityLogs from './components/ActivityLogs'
 
 // ============================================
-// COMPLETE APP WITH ALL MODULES - UPDATED
+// COMPLETE APP WITH ALL MODULES - FIXED
+// ✅ ADDED: damagedStatus field to all inventory items
 // ============================================
 
 export default function App() {
@@ -87,7 +88,7 @@ export default function App() {
     }
   ])
   
-  // Inventory data
+  // ✅ FIXED: Inventory data - ADDED damagedStatus to all items
   const [inventoryData, setInventoryData] = useState([
     {
       id: 1,
@@ -99,6 +100,7 @@ export default function App() {
       price: 250.00,
       supplier: 'Office Warehouse',
       supplierId: 1,
+      damagedStatus: 'Good', // ✅ ADDED
       dateAdded: '11/15/2025'
     },
     {
@@ -111,6 +113,7 @@ export default function App() {
       price: 15000.00,
       supplier: 'Tech Supplies Inc.',
       supplierId: 3,
+      damagedStatus: 'Good', // ✅ ADDED
       dateAdded: '11/14/2025'
     },
     {
@@ -123,6 +126,7 @@ export default function App() {
       price: 8500.00,
       supplier: 'Office Warehouse',
       supplierId: 1,
+      damagedStatus: 'Good', // ✅ ADDED
       dateAdded: '11/10/2025'
     },
     {
@@ -135,6 +139,7 @@ export default function App() {
       price: 10.00,
       supplier: 'Office Warehouse',
       supplierId: 1,
+      damagedStatus: 'Good', // ✅ ADDED
       dateAdded: '11/16/2025'
     },
     {
@@ -147,6 +152,7 @@ export default function App() {
       price: 1200.00,
       supplier: 'Tech Supplies Inc.',
       supplierId: 3,
+      damagedStatus: 'Good', // ✅ ADDED
       dateAdded: '11/12/2025'
     }
   ])

@@ -1,6 +1,7 @@
 // ============================================
 // FILE: src/components/ScheduleAppointmentDialog.jsx (FIXED)
 // ============================================
+// FIXED: Item selection now properly adds items to the appointment
 
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog'
@@ -28,6 +29,10 @@ export default function ScheduleAppointmentDialog({
   })
 
   const [selectedItems, setSelectedItems] = useState([])
+  
+  // ✅ FIX: Separate states for item selection form
+  const [selectedItemId, setSelectedItemId] = useState('')
+  const [itemQuantity, setItemQuantity] = useState('')
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -42,6 +47,9 @@ export default function ScheduleAppointmentDialog({
         supplierName: supplier.supplierName
       }))
       setSelectedItems([])
+      // ✅ Reset item selection when supplier changes
+      setSelectedItemId('')
+      setItemQuantity('')
     }
   }
 
@@ -49,10 +57,10 @@ export default function ScheduleAppointmentDialog({
     ? inventoryData.filter(item => item.supplierId === formData.supplierId)
     : []
 
-  const handleAddItem = (e) => {
-    e.preventDefault()
-    const itemId = parseInt(e.target.itemSelect.value)
-    const quantity = parseInt(e.target.itemQuantity.value)
+  // ✅ FIX: Rewritten handleAddItem to use state properly
+  const handleAddItem = () => {
+    const itemId = parseInt(selectedItemId)
+    const quantity = parseInt(itemQuantity)
 
     if (!itemId || !quantity || quantity <= 0) {
       alert('Please select an item and enter valid quantity')
@@ -72,8 +80,9 @@ export default function ScheduleAppointmentDialog({
         quantity: quantity
       }])
       
-      e.target.itemSelect.value = ''
-      e.target.itemQuantity.value = ''
+      // ✅ Reset form after adding
+      setSelectedItemId('')
+      setItemQuantity('')
     }
   }
 
@@ -90,7 +99,7 @@ export default function ScheduleAppointmentDialog({
       return
     }
 
-    // FIX: Check the actual selectedItems state, not formData
+    // ✅ This check should now work correctly
     if (selectedItems.length === 0) {
       alert('Please add at least one item to the appointment')
       return
@@ -107,7 +116,7 @@ export default function ScheduleAppointmentDialog({
     const newAppointment = {
       id: Date.now(),
       ...formData,
-      items: selectedItems, // FIX: Use the selectedItems state
+      items: selectedItems,
       scheduledBy: user.name,
       scheduledDate: new Date().toLocaleString('en-PH'),
       lastUpdated: new Date().toLocaleString('en-PH')
@@ -125,6 +134,8 @@ export default function ScheduleAppointmentDialog({
       notes: ''
     })
     setSelectedItems([])
+    setSelectedItemId('')
+    setItemQuantity('')
     onOpenChange(false)
   }
 
@@ -204,13 +215,17 @@ export default function ScheduleAppointmentDialog({
               </Select>
             </div>
 
+            {/* ✅ FIXED: Item selection section with proper state management */}
             {formData.supplierId && (
               <div className="space-y-3 p-4 border rounded-lg bg-gray-50">
                 <h4 className="font-semibold">Items to Restock</h4>
                 
                 <div className="grid grid-cols-12 gap-2">
                   <div className="col-span-7">
-                    <Select name="itemSelect">
+                    <Select 
+                      value={selectedItemId}
+                      onChange={(e) => setSelectedItemId(e.target.value)}
+                    >
                       <option value="">Select item...</option>
                       {supplierItems
                         .filter(item => !selectedItems.some(si => si.itemId === item.id))
@@ -225,9 +240,10 @@ export default function ScheduleAppointmentDialog({
                   <div className="col-span-3">
                     <Input
                       type="number"
-                      name="itemQuantity"
                       min="1"
                       placeholder="Qty"
+                      value={itemQuantity}
+                      onChange={(e) => setItemQuantity(e.target.value)}
                     />
                   </div>
                   <div className="col-span-2">
