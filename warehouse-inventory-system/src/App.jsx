@@ -256,15 +256,31 @@ export default function App() {
         minute: '2-digit',
         hour12: true
       }),
-      details: `Added ${newItem.quantity} units`
+      details: `Added ${newItem.quantity} units to inventory`
     }
     setActivityLogs(prev => [...prev, newLog])
   }
 
   const handleEditItem = (updatedItem) => {
+    const oldItem = inventoryData.find(item => item.id === updatedItem.id)
     setInventoryData(prev => 
       prev.map(item => item.id === updatedItem.id ? updatedItem : item)
     )
+
+    // Detailed logging of what changed
+    const changes = []
+    if (oldItem.quantity !== updatedItem.quantity) {
+      changes.push(`quantity: ${oldItem.quantity} → ${updatedItem.quantity}`)
+    }
+    if (oldItem.location !== updatedItem.location) {
+      changes.push(`location: ${oldItem.location} → ${updatedItem.location}`)
+    }
+    if (oldItem.category !== updatedItem.category) {
+      changes.push(`category: ${oldItem.category} → ${updatedItem.category}`)
+    }
+    if (oldItem.supplier !== updatedItem.supplier) {
+      changes.push(`supplier: ${oldItem.supplier || 'None'} → ${updatedItem.supplier || 'None'}`)
+    }
 
     const newLog = {
       id: Date.now(),
@@ -280,7 +296,7 @@ export default function App() {
         minute: '2-digit',
         hour12: true
       }),
-      details: 'Updated item information'
+      details: changes.length > 0 ? `Updated: ${changes.join(', ')}` : 'Updated item information'
     }
     setActivityLogs(prev => [...prev, newLog])
   }
@@ -313,6 +329,8 @@ export default function App() {
 
   // Transaction handler
   const handleTransaction = (transaction) => {
+    const oldItem = inventoryData.find(item => item.id === transaction.itemId)
+    
     setInventoryData(prev => 
       prev.map(item => {
         if (item.id === transaction.itemId) {
@@ -341,7 +359,7 @@ export default function App() {
       userName: transaction.userName,
       userRole: transaction.userRole,
       timestamp: transaction.timestamp,
-      details: `${action} - ${transaction.reason}`
+      details: `${action} (${oldItem.quantity} → ${transaction.stockAfter}) - ${transaction.reason}`
     }
     setActivityLogs(prev => [...prev, newLog])
 
@@ -362,6 +380,25 @@ export default function App() {
           notes: ''
         }
         setDamagedItems(prev => [...prev, damagedItem])
+        
+        // Log damaged item creation
+        const damagedLog = {
+          id: Date.now() + 1,
+          itemName: item.itemName,
+          action: 'Added',
+          userName: currentUser.name,
+          userRole: currentUser.role,
+          timestamp: new Date().toLocaleString('en-PH', {
+            month: '2-digit',
+            day: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+          }),
+          details: `${transaction.quantity} units marked as damaged and moved to Damaged Items list`
+        }
+        setActivityLogs(prev => [...prev, damagedLog])
       }
     }
   }
@@ -597,7 +634,7 @@ export default function App() {
       )
     )
 
-    // ✅ FIX: Update inventory with supplier info
+    // Update inventory with supplier info
     setInventoryData(prev =>
       prev.map(item => {
         const appointmentItem = appointment.items.find(ai => ai.itemId === item.id)
@@ -606,8 +643,8 @@ export default function App() {
           return {
             ...item,
             quantity: item.quantity + appointmentItem.quantity,
-            supplierId: appointment.supplierId,      // ✅ ADD THIS
-            supplier: appointment.supplierName       // ✅ ADD THIS
+            supplierId: appointment.supplierId,
+            supplier: appointment.supplierName
           }
         }
         
@@ -644,10 +681,11 @@ export default function App() {
       }
     })
 
-    // Activity log
+    // Enhanced activity log
+    const itemsList = appointment.items.map(i => `${i.itemName} (${i.quantity})`).join(', ')
     const newLog = {
       id: Date.now(),
-      itemName: `Appointment with ${appointment.supplierName}`,
+      itemName: `Appointment: ${appointment.supplierName}`,
       action: 'Edited',
       userName: currentUser.name,
       userRole: currentUser.role,
@@ -659,7 +697,7 @@ export default function App() {
         minute: '2-digit',
         hour12: true
       }),
-      details: `Marked as completed - ${appointment.items.length} items restocked`
+      details: `Completed appointment - Restocked ${appointment.items.length} item(s): ${itemsList}`
     }
     setActivityLogs(prev => [...prev, newLog])
   }
@@ -697,9 +735,15 @@ export default function App() {
 
   // Damaged items handlers
   const handleUpdateDamagedItem = (updatedItem) => {
+    const oldItem = damagedItems.find(item => item.id === updatedItem.id)
+    
     setDamagedItems(prev =>
       prev.map(item => item.id === updatedItem.id ? updatedItem : item)
     )
+
+    const statusChange = oldItem.status !== updatedItem.status 
+      ? ` Status changed: ${oldItem.status} → ${updatedItem.status}`
+      : ''
 
     const newLog = {
       id: Date.now(),
@@ -715,7 +759,7 @@ export default function App() {
         minute: '2-digit',
         hour12: true
       }),
-      details: `Damaged item status updated to ${updatedItem.status}`
+      details: `Damaged item updated.${statusChange}${updatedItem.notes ? ` Notes: ${updatedItem.notes}` : ''}`
     }
     setActivityLogs(prev => [...prev, newLog])
   }
@@ -740,7 +784,7 @@ export default function App() {
           minute: '2-digit',
           hour12: true
         }),
-        details: 'Removed from damaged items list'
+        details: `Removed from damaged items list (${item.quantity} units, Status: ${item.status})`
       }
       setActivityLogs(prev => [...prev, newLog])
     }
