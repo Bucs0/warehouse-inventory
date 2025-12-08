@@ -128,7 +128,7 @@ export default function AddSupplierDialog({
               </Label>
               <Input
                 id="supplierName"
-                placeholder="e.g., Office Warehouse"
+                placeholder="jomissmart@gmail.com"
                 value={formData.supplierName}
                 onChange={(e) => handleChange('supplierName', e.target.value)}
                 required
@@ -141,7 +141,7 @@ export default function AddSupplierDialog({
               </Label>
               <Input
                 id="contactPerson"
-                placeholder="e.g., Juan Dela Cruz"
+                placeholder="berdecaloy@gmail.com"
                 value={formData.contactPerson}
                 onChange={(e) => handleChange('contactPerson', e.target.value)}
                 required
@@ -154,7 +154,7 @@ export default function AddSupplierDialog({
                 <Input
                   id="contactEmail"
                   type="email"
-                  placeholder="e.g., sales@supplier.com"
+                  placeholder="chiefmayo2024@gmail.com"
                   value={formData.contactEmail}
                   onChange={(e) => handleChange('contactEmail', e.target.value)}
                 />

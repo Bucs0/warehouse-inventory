@@ -1,14 +1,13 @@
 // ============================================
-// FILE: src/lib/emailService.js (UPDATED)
+// FILE: src/lib/emailService.js (FIXED)
 // ============================================
 // Email notification service using EmailJS
 
-// ✅ STEP 1: Replace these with your EmailJS credentials
-// Get them from: https://www.emailjs.com/
-const EMAILJS_SERVICE_ID = 'service_an2ngeg' // e.g., 'service_abc123'
-const EMAILJS_TEMPLATE_ID_LOW_STOCK = 'template_l3vz6al' // e.g., 'template_lowstock'
-const EMAILJS_TEMPLATE_ID_APPOINTMENT = 'template_x3a2ecb' // e.g., 'template_appointment'
-const EMAILJS_PUBLIC_KEY = 'Lk9FwnFHIYBdz8d-d' // e.g., 'abcdef123456'
+// ✅ Your EmailJS credentials (from your code)
+const EMAILJS_SERVICE_ID = 'service_an2ngeg'
+const EMAILJS_TEMPLATE_ID_LOW_STOCK = 'template_l3vz6al'
+const EMAILJS_TEMPLATE_ID_APPOINTMENT = 'template_x3a2ecb'
+const EMAILJS_PUBLIC_KEY = 'Lk9FwnFHIYBdz8d-d'
 
 // Load EmailJS library
 const loadEmailJS = () => {
@@ -36,12 +35,13 @@ export const sendLowStockAlert = async (item, adminEmail) => {
   try {
     const emailjs = await loadEmailJS()
 
+    // ✅ FIXED: Variable names must match your EmailJS template EXACTLY
     const templateParams = {
-      to_email: adminEmail,
       to_name: 'Admin',
+      to_email: adminEmail,
       item_name: item.itemName,
-      current_quantity: item.quantity,
-      reorder_level: item.reorderLevel,
+      current_quantity: String(item.quantity),
+      reorder_level: String(item.reorderLevel),
       location: item.location,
       category: item.category,
       supplier: item.supplier || 'No supplier assigned',
@@ -54,6 +54,8 @@ export const sendLowStockAlert = async (item, adminEmail) => {
         hour12: true
       })
     }
+
+    console.log('📧 Sending low stock alert with params:', templateParams)
 
     const response = await emailjs.send(
       EMAILJS_SERVICE_ID,
@@ -76,7 +78,7 @@ export const sendAppointmentEmail = async (appointment, supplier) => {
   try {
     const emailjs = await loadEmailJS()
 
-    // Format items list
+    // Format items list for email
     const itemsList = appointment.items
       .map(item => `• ${item.itemName} - ${item.quantity} units`)
       .join('\n')
@@ -89,19 +91,22 @@ export const sendAppointmentEmail = async (appointment, supplier) => {
       year: 'numeric'
     })
 
+    // ✅ FIXED: Variable names must match your EmailJS template EXACTLY
     const templateParams = {
-      to_email: supplier.contactEmail,
       to_name: supplier.contactPerson,
+      to_email: supplier.contactEmail,
       supplier_name: supplier.supplierName,
       appointment_date: formattedDate,
       appointment_time: appointment.time,
       items_list: itemsList,
-      total_items: appointment.items.length,
+      total_items: String(appointment.items.length),
       notes: appointment.notes || 'No additional notes',
       scheduled_by: appointment.scheduledBy,
       status: appointment.status,
       contact_phone: supplier.contactPhone || 'Not provided'
     }
+
+    console.log('📧 Sending appointment email with params:', templateParams)
 
     const response = await emailjs.send(
       EMAILJS_SERVICE_ID,
@@ -135,11 +140,13 @@ export const sendTestEmail = async (testEmail) => {
     const emailjs = await loadEmailJS()
 
     const templateParams = {
-      to_email: testEmail,
       to_name: 'Test User',
+      to_email: testEmail,
       message: 'This is a test email from your Warehouse Inventory System. Email notifications are working correctly!',
       test_date: new Date().toLocaleString('en-PH')
     }
+
+    console.log('📧 Sending test email with params:', templateParams)
 
     const response = await emailjs.send(
       EMAILJS_SERVICE_ID,
