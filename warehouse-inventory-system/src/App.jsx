@@ -1,4 +1,11 @@
-import { useState } from 'react'
+// ============================================
+// FILE: src/App.jsx (UPDATED - WITH REAL-TIME SYNC)
+// ============================================
+// ✅ ADDED: localStorage event listeners for cross-tab synchronization
+// ✅ ADDED: Auto-save and auto-load for all data
+// ✅ FIXED: Data now syncs across multiple tabs in real-time
+
+import { useState, useEffect } from 'react'
 import Login from './components/Login'
 import Dashboard from './components/Dashboard'
 import InventoryTable from './components/InventoryTable'
@@ -9,226 +16,295 @@ import AppointmentsPage from './components/AppointmentsPage'
 import DamagedItemsPage from './components/DamagedItemsPage'
 import ActivityLogs from './components/ActivityLogs'
 
-// ============================================
-// COMPLETE APP WITH ALL MODULES - FIXED
-// ✅ ADDED: damagedStatus field to all inventory items
-// ============================================
-
 export default function App() {
   // ========== STATE MANAGEMENT ==========
   
   const [currentUser, setCurrentUser] = useState(null)
   const [currentPage, setCurrentPage] = useState('dashboard')
   
-  // Suppliers data
-  const [suppliers, setSuppliers] = useState([
-    {
-      id: 1,
-      supplierName: 'Office Warehouse',
-      contactPerson: 'Juan Dela Cruz',
-      contactEmail: 'sales@officewarehouse.ph',
-      contactPhone: '+63-912-345-6789',
-      address: 'Quezon City, Metro Manila',
-      isActive: true,
-      dateAdded: '11/01/2025'
-    },
-    {
-      id: 2,
-      supplierName: 'COSCO SHIPPING',
-      contactPerson: 'Maria Santos',
-      contactEmail: 'contact@coscoshipping.ph',
-      contactPhone: '+63-917-888-9999',
-      address: 'Manila Port Area',
-      isActive: true,
-      dateAdded: '11/02/2025'
-    },
-    {
-      id: 3,
-      supplierName: 'Tech Supplies Inc.',
-      contactPerson: 'Pedro Reyes',
-      contactEmail: 'info@techsupplies.ph',
-      contactPhone: '+63-918-111-2222',
-      address: 'Makati City',
-      isActive: true,
-      dateAdded: '11/03/2025'
-    }
-  ])
+  // ✅ UPDATED: Initialize from localStorage
+  const [suppliers, setSuppliers] = useState(() => {
+    const saved = localStorage.getItem('suppliers')
+    return saved ? JSON.parse(saved) : [
+      {
+        id: 1,
+        supplierName: 'Office Warehouse',
+        contactPerson: 'Juan Dela Cruz',
+        contactEmail: 'sales@officewarehouse.ph',
+        contactPhone: '+63-912-345-6789',
+        address: 'Quezon City, Metro Manila',
+        isActive: true,
+        dateAdded: '11/01/2025'
+      },
+      {
+        id: 2,
+        supplierName: 'COSCO SHIPPING',
+        contactPerson: 'Maria Santos',
+        contactEmail: 'contact@coscoshipping.ph',
+        contactPhone: '+63-917-888-9999',
+        address: 'Manila Port Area',
+        isActive: true,
+        dateAdded: '11/02/2025'
+      },
+      {
+        id: 3,
+        supplierName: 'Tech Supplies Inc.',
+        contactPerson: 'Pedro Reyes',
+        contactEmail: 'info@techsupplies.ph',
+        contactPhone: '+63-918-111-2222',
+        address: 'Makati City',
+        isActive: true,
+        dateAdded: '11/03/2025'
+      }
+    ]
+  })
 
-  // Categories data
-  const [categories, setCategories] = useState([
-    {
-      id: 1,
-      categoryName: 'Office Supplies',
-      description: 'Paper, pens, and general office items',
-      dateAdded: '11/01/2025'
-    },
-    {
-      id: 2,
-      categoryName: 'Equipment',
-      description: 'Printers, computers, and machinery',
-      dateAdded: '11/01/2025'
-    },
-    {
-      id: 3,
-      categoryName: 'Furniture',
-      description: 'Desks, chairs, and storage',
-      dateAdded: '11/01/2025'
-    },
-    {
-      id: 4,
-      categoryName: 'Electronics',
-      description: 'Gadgets and electronic accessories',
-      dateAdded: '11/01/2025'
-    },
-    {
-      id: 5,
-      categoryName: 'Other',
-      description: 'Miscellaneous items',
-      dateAdded: '11/01/2025'
-    }
-  ])
+  const [categories, setCategories] = useState(() => {
+    const saved = localStorage.getItem('categories')
+    return saved ? JSON.parse(saved) : [
+      {
+        id: 1,
+        categoryName: 'Office Supplies',
+        description: 'Paper, pens, and general office items',
+        dateAdded: '11/01/2025'
+      },
+      {
+        id: 2,
+        categoryName: 'Equipment',
+        description: 'Printers, computers, and machinery',
+        dateAdded: '11/01/2025'
+      },
+      {
+        id: 3,
+        categoryName: 'Furniture',
+        description: 'Desks, chairs, and storage',
+        dateAdded: '11/01/2025'
+      },
+      {
+        id: 4,
+        categoryName: 'Electronics',
+        description: 'Gadgets and electronic accessories',
+        dateAdded: '11/01/2025'
+      },
+      {
+        id: 5,
+        categoryName: 'Other',
+        description: 'Miscellaneous items',
+        dateAdded: '11/01/2025'
+      }
+    ]
+  })
   
-  // ✅ FIXED: Inventory data - ADDED damagedStatus to all items
-  const [inventoryData, setInventoryData] = useState([
-    {
-      id: 1,
-      itemName: 'A4 Bond Paper',
-      category: 'Office Supplies',
-      quantity: 50,
-      location: 'Warehouse A, Shelf 1',
-      reorderLevel: 20,
-      price: 250.00,
-      supplier: 'Office Warehouse',
-      supplierId: 1,
-      damagedStatus: 'Good', // ✅ ADDED
-      dateAdded: '11/15/2025'
-    },
-    {
-      id: 2,
-      itemName: 'HP Printer',
-      category: 'Equipment',
-      quantity: 5,
-      location: 'Warehouse B, Section 2',
-      reorderLevel: 10,
-      price: 15000.00,
-      supplier: 'Tech Supplies Inc.',
-      supplierId: 3,
-      damagedStatus: 'Good', // ✅ ADDED
-      dateAdded: '11/14/2025'
-    },
-    {
-      id: 3,
-      itemName: 'Office Desk',
-      category: 'Furniture',
-      quantity: 3,
-      location: 'Warehouse C, Area 1',
-      reorderLevel: 5,
-      price: 8500.00,
-      supplier: 'Office Warehouse',
-      supplierId: 1,
-      damagedStatus: 'Good', // ✅ ADDED
-      dateAdded: '11/10/2025'
-    },
-    {
-      id: 4,
-      itemName: 'Ballpen (Black)',
-      category: 'Office Supplies',
-      quantity: 200,
-      location: 'Warehouse A, Shelf 3',
-      reorderLevel: 50,
-      price: 10.00,
-      supplier: 'Office Warehouse',
-      supplierId: 1,
-      damagedStatus: 'Good', // ✅ ADDED
-      dateAdded: '11/16/2025'
-    },
-    {
-      id: 5,
-      itemName: 'Laptop Stand',
-      category: 'Electronics',
-      quantity: 8,
-      location: 'Warehouse B, Section 4',
-      reorderLevel: 15,
-      price: 1200.00,
-      supplier: 'Tech Supplies Inc.',
-      supplierId: 3,
-      damagedStatus: 'Good', // ✅ ADDED
-      dateAdded: '11/12/2025'
-    }
-  ])
+  const [inventoryData, setInventoryData] = useState(() => {
+    const saved = localStorage.getItem('inventoryData')
+    return saved ? JSON.parse(saved) : [
+      {
+        id: 1,
+        itemName: 'A4 Bond Paper',
+        category: 'Office Supplies',
+        quantity: 50,
+        location: 'Warehouse A, Shelf 1',
+        reorderLevel: 20,
+        price: 250.00,
+        supplier: 'Office Warehouse',
+        supplierId: 1,
+        damagedStatus: 'Good',
+        dateAdded: '11/15/2025'
+      },
+      {
+        id: 2,
+        itemName: 'HP Printer',
+        category: 'Equipment',
+        quantity: 5,
+        location: 'Warehouse B, Section 2',
+        reorderLevel: 10,
+        price: 15000.00,
+        supplier: 'Tech Supplies Inc.',
+        supplierId: 3,
+        damagedStatus: 'Good',
+        dateAdded: '11/14/2025'
+      },
+      {
+        id: 3,
+        itemName: 'Office Desk',
+        category: 'Furniture',
+        quantity: 3,
+        location: 'Warehouse C, Area 1',
+        reorderLevel: 5,
+        price: 8500.00,
+        supplier: 'Office Warehouse',
+        supplierId: 1,
+        damagedStatus: 'Good',
+        dateAdded: '11/10/2025'
+      },
+      {
+        id: 4,
+        itemName: 'Ballpen (Black)',
+        category: 'Office Supplies',
+        quantity: 200,
+        location: 'Warehouse A, Shelf 3',
+        reorderLevel: 50,
+        price: 10.00,
+        supplier: 'Office Warehouse',
+        supplierId: 1,
+        damagedStatus: 'Good',
+        dateAdded: '11/16/2025'
+      },
+      {
+        id: 5,
+        itemName: 'Laptop Stand',
+        category: 'Electronics',
+        quantity: 8,
+        location: 'Warehouse B, Section 4',
+        reorderLevel: 15,
+        price: 1200.00,
+        supplier: 'Tech Supplies Inc.',
+        supplierId: 3,
+        damagedStatus: 'Good',
+        dateAdded: '11/12/2025'
+      }
+    ]
+  })
   
-  // Activity logs
-  const [activityLogs, setActivityLogs] = useState([
-    {
-      id: 1,
-      itemName: 'A4 Bond Paper',
-      action: 'Added',
-      userName: 'Mark Jade Bucao',
-      userRole: 'Admin',
-      timestamp: '11/15/2025 10:30 AM',
-      details: 'Initial stock entry'
-    },
-    {
-      id: 2,
-      itemName: 'HP Printer',
-      action: 'Added',
-      userName: 'Mark Jade Bucao',
-      userRole: 'Admin',
-      timestamp: '11/14/2025 2:15 PM',
-      details: 'New equipment received'
-    },
-    {
-      id: 3,
-      itemName: 'Office Desk',
-      action: 'Edited',
-      userName: 'Chadrick Arsenal',
-      userRole: 'Staff',
-      timestamp: '11/16/2025 9:45 AM',
-      details: 'Updated item information'
+  const [activityLogs, setActivityLogs] = useState(() => {
+    const saved = localStorage.getItem('activityLogs')
+    return saved ? JSON.parse(saved) : [
+      {
+        id: 1,
+        itemName: 'A4 Bond Paper',
+        action: 'Added',
+        userName: 'Mark Jade Bucao',
+        userRole: 'Admin',
+        timestamp: '11/15/2025 10:30 AM',
+        details: 'Initial stock entry'
+      },
+      {
+        id: 2,
+        itemName: 'HP Printer',
+        action: 'Added',
+        userName: 'Mark Jade Bucao',
+        userRole: 'Admin',
+        timestamp: '11/14/2025 2:15 PM',
+        details: 'New equipment received'
+      },
+      {
+        id: 3,
+        itemName: 'Office Desk',
+        action: 'Edited',
+        userName: 'Chadrick Arsenal',
+        userRole: 'Staff',
+        timestamp: '11/16/2025 9:45 AM',
+        details: 'Updated item information'
+      }
+    ]
+  })
+
+  const [transactionHistory, setTransactionHistory] = useState(() => {
+    const saved = localStorage.getItem('transactionHistory')
+    return saved ? JSON.parse(saved) : [
+      {
+        id: 1,
+        itemId: 1,
+        itemName: 'A4 Bond Paper',
+        transactionType: 'IN',
+        quantity: 50,
+        reason: 'Initial stock',
+        userName: 'Mark Jade Bucao',
+        userRole: 'Admin',
+        timestamp: '11/15/2025 10:30 AM',
+        stockBefore: 0,
+        stockAfter: 50
+      }
+    ]
+  })
+
+  const [appointments, setAppointments] = useState(() => {
+    const saved = localStorage.getItem('appointments')
+    return saved ? JSON.parse(saved) : [
+      {
+        id: 1,
+        supplierId: 1,
+        supplierName: 'Office Warehouse',
+        date: '2025-11-25',
+        time: '10:00',
+        status: 'pending',
+        items: [
+          { itemId: 1, itemName: 'A4 Bond Paper', quantity: 100 },
+          { itemId: 4, itemName: 'Ballpen (Black)', quantity: 500 }
+        ],
+        notes: 'Deliver to main entrance',
+        scheduledBy: 'Mark Jade Bucao',
+        scheduledDate: '11/18/2025 2:30 PM',
+        lastUpdated: '11/18/2025 2:30 PM'
+      }
+    ]
+  })
+
+  const [damagedItems, setDamagedItems] = useState(() => {
+    const saved = localStorage.getItem('damagedItems')
+    return saved ? JSON.parse(saved) : []
+  })
+
+  // ✅ NEW: Auto-save to localStorage whenever data changes
+  useEffect(() => {
+    localStorage.setItem('suppliers', JSON.stringify(suppliers))
+  }, [suppliers])
+
+  useEffect(() => {
+    localStorage.setItem('categories', JSON.stringify(categories))
+  }, [categories])
+
+  useEffect(() => {
+    localStorage.setItem('inventoryData', JSON.stringify(inventoryData))
+  }, [inventoryData])
+
+  useEffect(() => {
+    localStorage.setItem('activityLogs', JSON.stringify(activityLogs))
+  }, [activityLogs])
+
+  useEffect(() => {
+    localStorage.setItem('transactionHistory', JSON.stringify(transactionHistory))
+  }, [transactionHistory])
+
+  useEffect(() => {
+    localStorage.setItem('appointments', JSON.stringify(appointments))
+  }, [appointments])
+
+  useEffect(() => {
+    localStorage.setItem('damagedItems', JSON.stringify(damagedItems))
+  }, [damagedItems])
+
+  // ✅ NEW: Listen for storage events from other tabs
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      // Only respond to changes from OTHER tabs
+      if (e.key === 'inventoryData' && e.newValue) {
+        setInventoryData(JSON.parse(e.newValue))
+      } else if (e.key === 'activityLogs' && e.newValue) {
+        setActivityLogs(JSON.parse(e.newValue))
+      } else if (e.key === 'transactionHistory' && e.newValue) {
+        setTransactionHistory(JSON.parse(e.newValue))
+      } else if (e.key === 'suppliers' && e.newValue) {
+        setSuppliers(JSON.parse(e.newValue))
+      } else if (e.key === 'categories' && e.newValue) {
+        setCategories(JSON.parse(e.newValue))
+      } else if (e.key === 'appointments' && e.newValue) {
+        setAppointments(JSON.parse(e.newValue))
+      } else if (e.key === 'damagedItems' && e.newValue) {
+        setDamagedItems(JSON.parse(e.newValue))
+      }
     }
-  ])
 
-  // Stock transaction history
-  const [transactionHistory, setTransactionHistory] = useState([
-    {
-      id: 1,
-      itemId: 1,
-      itemName: 'A4 Bond Paper',
-      transactionType: 'IN',
-      quantity: 50,
-      reason: 'Initial stock',
-      userName: 'Mark Jade Bucao',
-      userRole: 'Admin',
-      timestamp: '11/15/2025 10:30 AM',
-      stockBefore: 0,
-      stockAfter: 50
+    // Add event listener
+    window.addEventListener('storage', handleStorageChange)
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
     }
-  ])
+  }, [])
 
-  // Appointments
-  const [appointments, setAppointments] = useState([
-    {
-      id: 1,
-      supplierId: 1,
-      supplierName: 'Office Warehouse',
-      date: '2025-11-25',
-      time: '10:00',
-      status: 'pending',
-      items: [
-        { itemId: 1, itemName: 'A4 Bond Paper', quantity: 100 },
-        { itemId: 4, itemName: 'Ballpen (Black)', quantity: 500 }
-      ],
-      notes: 'Deliver to main entrance',
-      scheduledBy: 'Mark Jade Bucao',
-      scheduledDate: '11/18/2025 2:30 PM',
-      lastUpdated: '11/18/2025 2:30 PM'
-    }
-  ])
-
-  // Damaged items
-  const [damagedItems, setDamagedItems] = useState([])
-
-  // ========== HANDLER FUNCTIONS ==========
+  // ========== HANDLER FUNCTIONS (unchanged) ==========
   
   const handleLogin = (user) => {
     setCurrentUser(user)
@@ -244,7 +320,6 @@ export default function App() {
     setCurrentPage(page)
   }
 
-  // Inventory handlers
   const handleAddItem = (newItem) => {
     setInventoryData(prev => [...prev, newItem])
 
@@ -273,7 +348,6 @@ export default function App() {
       prev.map(item => item.id === updatedItem.id ? updatedItem : item)
     )
 
-    // Detailed logging of what changed
     const changes = []
     if (oldItem.quantity !== updatedItem.quantity) {
       changes.push(`quantity: ${oldItem.quantity} → ${updatedItem.quantity}`)
@@ -333,7 +407,6 @@ export default function App() {
     }
   }
 
-  // Transaction handler
   const handleTransaction = (transaction) => {
     const oldItem = inventoryData.find(item => item.id === transaction.itemId)
     
@@ -369,7 +442,6 @@ export default function App() {
     }
     setActivityLogs(prev => [...prev, newLog])
 
-    // If OUT transaction with "Damaged/Discarded" reason, add to damaged items
     if (transaction.transactionType === 'OUT' && transaction.reason === 'Damaged/Discarded') {
       const item = inventoryData.find(i => i.id === transaction.itemId)
       if (item) {
@@ -387,7 +459,6 @@ export default function App() {
         }
         setDamagedItems(prev => [...prev, damagedItem])
         
-        // Log damaged item creation
         const damagedLog = {
           id: Date.now() + 1,
           itemName: item.itemName,
@@ -409,11 +480,9 @@ export default function App() {
     }
   }
 
-  // Supplier handlers - UPDATED
   const handleAddSupplier = (newSupplier) => {
     setSuppliers(prev => [...prev, newSupplier])
 
-    // ✅ FIX: Update inventory items to link them to this supplier
     if (newSupplier.suppliedItemIds && newSupplier.suppliedItemIds.length > 0) {
       setInventoryData(prev =>
         prev.map(item =>
@@ -493,7 +562,6 @@ export default function App() {
     }
   }
 
-  // Category handlers
   const handleAddCategory = (newCategory) => {
     setCategories(prev => [...prev, newCategory])
 
@@ -578,7 +646,6 @@ export default function App() {
     }
   }
 
-  // Appointment handlers
   const handleScheduleAppointment = (appointment) => {
     setAppointments(prev => [...prev, appointment])
 
@@ -625,13 +692,11 @@ export default function App() {
     setActivityLogs(prev => [...prev, newLog])
   }
 
-  // ✅ FIX: Update handleCompleteAppointment to assign supplier
   const handleCompleteAppointment = (appointmentId) => {
     const appointment = appointments.find(a => a.id === appointmentId)
     
     if (!appointment) return
 
-    // Update appointment status
     setAppointments(prev =>
       prev.map(apt => 
         apt.id === appointmentId 
@@ -640,7 +705,6 @@ export default function App() {
       )
     )
 
-    // Update inventory with supplier info
     setInventoryData(prev =>
       prev.map(item => {
         const appointmentItem = appointment.items.find(ai => ai.itemId === item.id)
@@ -658,7 +722,6 @@ export default function App() {
       })
     )
 
-    // Add transaction history for each item
     appointment.items.forEach(appointmentItem => {
       const item = inventoryData.find(i => i.id === appointmentItem.itemId)
       if (item) {
@@ -687,7 +750,6 @@ export default function App() {
       }
     })
 
-    // Enhanced activity log
     const itemsList = appointment.items.map(i => `${i.itemName} (${i.quantity})`).join(', ')
     const newLog = {
       id: Date.now(),
@@ -739,7 +801,6 @@ export default function App() {
     }
   }
 
-  // Damaged items handlers
   const handleUpdateDamagedItem = (updatedItem) => {
     const oldItem = damagedItems.find(item => item.id === updatedItem.id)
     
