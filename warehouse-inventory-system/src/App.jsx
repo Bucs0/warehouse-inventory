@@ -1,9 +1,7 @@
 // ============================================
-// FILE: src/App.jsx (UPDATED - WITH REAL-TIME SYNC)
+// FILE: src/App.jsx (UPDATED - WITH EMAIL NOTIFICATIONS)
 // ============================================
-// ✅ ADDED: localStorage event listeners for cross-tab synchronization
-// ✅ ADDED: Auto-save and auto-load for all data
-// ✅ FIXED: Data now syncs across multiple tabs in real-time
+// ✅ ADDED: Email notifications for low stock alerts and appointments
 
 import { useState, useEffect } from 'react'
 import Login from './components/Login'
@@ -16,13 +14,18 @@ import AppointmentsPage from './components/AppointmentsPage'
 import DamagedItemsPage from './components/DamagedItemsPage'
 import ActivityLogs from './components/ActivityLogs'
 
+// ✅ NEW: Import email service
+import { sendLowStockAlert, sendAppointmentEmail } from './lib/emailService'
+
+// ✅ IMPORTANT: Set your admin email here
+const ADMIN_EMAIL = 'markjadebucao10@gmail.com' // Change this to your actual admin email
+
 export default function App() {
   // ========== STATE MANAGEMENT ==========
   
   const [currentUser, setCurrentUser] = useState(null)
   const [currentPage, setCurrentPage] = useState('dashboard')
   
-  // ✅ UPDATED: Initialize from localStorage
   const [suppliers, setSuppliers] = useState(() => {
     const saved = localStorage.getItem('suppliers')
     return saved ? JSON.parse(saved) : [
@@ -245,7 +248,13 @@ export default function App() {
     return saved ? JSON.parse(saved) : []
   })
 
-  // ✅ NEW: Auto-save to localStorage whenever data changes
+  // ✅ NEW: Track which items we've already sent low stock alerts for
+  const [lowStockAlertsSent, setLowStockAlertsSent] = useState(() => {
+    const saved = localStorage.getItem('lowStockAlertsSent')
+    return saved ? JSON.parse(saved) : []
+  })
+
+  // Auto-save to localStorage
   useEffect(() => {
     localStorage.setItem('suppliers', JSON.stringify(suppliers))
   }, [suppliers])
@@ -274,10 +283,77 @@ export default function App() {
     localStorage.setItem('damagedItems', JSON.stringify(damagedItems))
   }, [damagedItems])
 
-  // ✅ NEW: Listen for storage events from other tabs
+  useEffect(() => {
+    localStorage.setItem('lowStockAlertsSent', JSON.stringify(lowStockAlertsSent))
+  }, [lowStockAlertsSent])
+
+  // ✅ NEW: Check for low stock items and send email alerts
+  useEffect(() => {
+    if (!currentUser) return // Don't check if not logged in
+
+    const checkLowStock = async () => {
+      const lowStockItems = inventoryData.filter(item => 
+        item.quantity <= item.reorderLevel && 
+        !lowStockAlertsSent.includes(item.id) // Only send if not already sent
+      )
+
+      for (const item of lowStockItems) {
+        const result = await sendLowStockAlert(item, ADMIN_EMAIL)
+        
+        if (result.success) {
+          console.log(`✅ Low stock alert sent for: ${item.itemName}`)
+          
+          // Mark this item as alerted
+          setLowStockAlertsSent(prev => [...prev, item.id])
+          
+          // Add to activity logs
+          const newLog = {
+            id: Date.now() + Math.random(),
+            itemName: item.itemName,
+            action: 'Alert',
+            userName: 'System',
+            userRole: 'Automated',
+            timestamp: new Date().toLocaleString('en-PH', {
+              month: '2-digit',
+              day: '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true
+            }),
+            details: `Low stock email alert sent to admin (${item.quantity} units remaining, reorder at ${item.reorderLevel})`
+          }
+          setActivityLogs(prev => [...prev, newLog])
+        } else {
+          console.error(`❌ Failed to send alert for: ${item.itemName}`)
+        }
+      }
+    }
+
+    // Check every 30 seconds
+    checkLowStock()
+    const interval = setInterval(checkLowStock, 30000)
+
+    return () => clearInterval(interval)
+  }, [inventoryData, currentUser, lowStockAlertsSent])
+
+  // ✅ NEW: Clear low stock alerts when stock is replenished above reorder level
+  useEffect(() => {
+    const restockedItems = inventoryData.filter(item => 
+      item.quantity > item.reorderLevel && 
+      lowStockAlertsSent.includes(item.id)
+    )
+
+    if (restockedItems.length > 0) {
+      setLowStockAlertsSent(prev => 
+        prev.filter(id => !restockedItems.some(item => item.id === id))
+      )
+    }
+  }, [inventoryData, lowStockAlertsSent])
+
+  // Listen for storage events from other tabs
   useEffect(() => {
     const handleStorageChange = (e) => {
-      // Only respond to changes from OTHER tabs
       if (e.key === 'inventoryData' && e.newValue) {
         setInventoryData(JSON.parse(e.newValue))
       } else if (e.key === 'activityLogs' && e.newValue) {
@@ -295,16 +371,11 @@ export default function App() {
       }
     }
 
-    // Add event listener
     window.addEventListener('storage', handleStorageChange)
-
-    // Cleanup
-    return () => {
-      window.removeEventListener('storage', handleStorageChange)
-    }
+    return () => window.removeEventListener('storage', handleStorageChange)
   }, [])
 
-  // ========== HANDLER FUNCTIONS (unchanged) ==========
+  // ========== HANDLER FUNCTIONS ==========
   
   const handleLogin = (user) => {
     setCurrentUser(user)

@@ -1,18 +1,16 @@
 // ============================================
-// FILE: src/lib/emailService.js (NEW)
+// FILE: src/lib/emailService.js (UPDATED)
 // ============================================
 // Email notification service using EmailJS
-// This handles sending emails for low stock alerts and appointment notifications
 
-// EmailJS Configuration
-// IMPORTANT: Replace these with your actual EmailJS credentials
+// ✅ STEP 1: Replace these with your EmailJS credentials
 // Get them from: https://www.emailjs.com/
-const EMAILJS_SERVICE_ID = 'YOUR_SERVICE_ID' // Replace with your EmailJS service ID
-const EMAILJS_TEMPLATE_ID_LOW_STOCK = 'YOUR_LOW_STOCK_TEMPLATE_ID' // Replace with your template ID
-const EMAILJS_TEMPLATE_ID_APPOINTMENT = 'YOUR_APPOINTMENT_TEMPLATE_ID' // Replace with your template ID
-const EMAILJS_PUBLIC_KEY = 'YOUR_PUBLIC_KEY' // Replace with your EmailJS public key
+const EMAILJS_SERVICE_ID = 'service_an2ngeg' // e.g., 'service_abc123'
+const EMAILJS_TEMPLATE_ID_LOW_STOCK = 'YOUR_LOW_STOCK_TEMPLATE_ID' // e.g., 'template_lowstock'
+const EMAILJS_TEMPLATE_ID_APPOINTMENT = 'YOUR_APPOINTMENT_TEMPLATE_ID' // e.g., 'template_appointment'
+const EMAILJS_PUBLIC_KEY = 'Lk9FwnFHIYBdz8d-d' // e.g., 'abcdef123456'
 
-// Initialize EmailJS (load the library)
+// Load EmailJS library
 const loadEmailJS = () => {
   return new Promise((resolve, reject) => {
     if (window.emailjs) {
@@ -33,9 +31,6 @@ const loadEmailJS = () => {
 
 /**
  * Send low stock alert email to admin
- * @param {Object} item - The inventory item that's low on stock
- * @param {string} adminEmail - Admin's email address
- * @returns {Promise} - Resolves when email is sent
  */
 export const sendLowStockAlert = async (item, adminEmail) => {
   try {
@@ -66,19 +61,16 @@ export const sendLowStockAlert = async (item, adminEmail) => {
       templateParams
     )
 
-    console.log('Low stock alert email sent:', response)
+    console.log('✅ Low stock alert email sent:', response)
     return { success: true, response }
   } catch (error) {
-    console.error('Failed to send low stock alert:', error)
+    console.error('❌ Failed to send low stock alert:', error)
     return { success: false, error: error.message }
   }
 }
 
 /**
  * Send appointment confirmation email to supplier
- * @param {Object} appointment - The appointment object
- * @param {Object} supplier - The supplier object
- * @returns {Promise} - Resolves when email is sent
  */
 export const sendAppointmentEmail = async (appointment, supplier) => {
   try {
@@ -117,17 +109,16 @@ export const sendAppointmentEmail = async (appointment, supplier) => {
       templateParams
     )
 
-    console.log('Appointment confirmation email sent:', response)
+    console.log('✅ Appointment confirmation email sent:', response)
     return { success: true, response }
   } catch (error) {
-    console.error('Failed to send appointment email:', error)
+    console.error('❌ Failed to send appointment email:', error)
     return { success: false, error: error.message }
   }
 }
 
 /**
  * Check if EmailJS is properly configured
- * @returns {boolean} - True if configured
  */
 export const isEmailConfigured = () => {
   return EMAILJS_SERVICE_ID !== 'YOUR_SERVICE_ID' &&
@@ -137,9 +128,7 @@ export const isEmailConfigured = () => {
 }
 
 /**
- * Test email configuration by sending a test email
- * @param {string} testEmail - Email to send test to
- * @returns {Promise} - Resolves when test email is sent
+ * Send test email
  */
 export const sendTestEmail = async (testEmail) => {
   try {
@@ -154,7 +143,7 @@ export const sendTestEmail = async (testEmail) => {
 
     const response = await emailjs.send(
       EMAILJS_SERVICE_ID,
-      EMAILJS_TEMPLATE_ID_LOW_STOCK, // Reuse low stock template for testing
+      EMAILJS_TEMPLATE_ID_LOW_STOCK,
       templateParams
     )
 
