@@ -1,7 +1,7 @@
 // ============================================
-// FILE: src/components/AppointmentsPage.jsx (UPDATED - EmailJS Ready)
+// FILE: src/components/AppointmentsPage.jsx (UPDATED - Cancel Email)
 // ============================================
-// ✅ ADDED: Email notifications for appointment confirmations to suppliers
+// ✅ UPDATED: Now sends cancellation email to supplier
 
 import { useState } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card'
@@ -13,8 +13,8 @@ import ScheduleAppointmentDialog from './ScheduleAppointmentDialog'
 import EditAppointmentDialog from './EditAppointmentDialog'
 import ViewAppointmentDialog from './ViewAppointmentDialog'
 
-// ✅ NEW: Import email service
-import { sendAppointmentEmail } from '../lib/emailService'
+// ✅ UPDATED: Import the new cancel email function
+import { sendAppointmentEmail, sendAppointmentCancelEmail } from '../lib/emailService'
 
 export default function AppointmentsPage({ 
   user, 
@@ -60,12 +60,10 @@ export default function AppointmentsPage({
     return appointmentDate >= today && appointmentDate <= nextWeek && a.status !== 'completed' && a.status !== 'cancelled'
   }).length
 
-  // ✅ NEW: Enhanced schedule handler with email notification
+  // Enhanced schedule handler with email notification
   const handleScheduleWithEmail = async (appointment) => {
-    // First, save the appointment
     onScheduleAppointment(appointment)
 
-    // Then, try to send email notification to supplier
     const supplier = suppliers.find(s => s.id === appointment.supplierId)
     
     if (supplier && supplier.contactEmail) {
@@ -75,11 +73,9 @@ export default function AppointmentsPage({
       
       if (emailResult.success) {
         console.log('✅ Email sent successfully to supplier')
-        // Optional: Show success notification to user
         alert(`✅ Appointment scheduled and confirmation email sent to ${supplier.supplierName}!`)
       } else {
         console.error('❌ Failed to send email:', emailResult.error)
-        // Still show success for appointment, but warn about email
         alert(`✅ Appointment scheduled successfully, but email notification failed to send. Please contact the supplier manually.`)
       }
     } else {
@@ -88,12 +84,10 @@ export default function AppointmentsPage({
     }
   }
 
-  // ✅ NEW: Enhanced edit handler with email notification
+  // Enhanced edit handler with email notification
   const handleEditWithEmail = async (updatedAppointment) => {
-    // First, save the updated appointment
     onEditAppointment(updatedAppointment)
 
-    // If appointment is being confirmed, send email
     const originalAppointment = appointments.find(a => a.id === updatedAppointment.id)
     const statusChanged = originalAppointment.status !== updatedAppointment.status
     const isNowConfirmed = updatedAppointment.status === 'confirmed'
@@ -123,9 +117,49 @@ export default function AppointmentsPage({
     }
   }
 
-  const handleCancel = (appointment) => {
-    if (window.confirm(`Cancel appointment with ${appointment.supplierName}? This action cannot be undone.`)) {
-      onCancelAppointment(appointment.id)
+  // ✅ UPDATED: Now sends cancellation email
+  const handleCancel = async (appointment) => {
+    // Prompt for cancellation reason
+    const cancelReason = prompt(
+      `Please provide a reason for cancelling the appointment with ${appointment.supplierName}:`,
+      'Schedule conflict'
+    )
+    
+    // If user clicks cancel in prompt, abort
+    if (cancelReason === null) {
+      return
+    }
+
+    // Confirm cancellation
+    if (!window.confirm(`Cancel appointment with ${appointment.supplierName}? This action cannot be undone.`)) {
+      return
+    }
+
+    // Cancel the appointment
+    onCancelAppointment(appointment.id)
+
+    // Try to send cancellation email to supplier
+    const supplier = suppliers.find(s => s.id === appointment.supplierId)
+    
+    if (supplier && supplier.contactEmail) {
+      console.log('📧 Sending cancellation email to:', supplier.contactEmail)
+      
+      const emailResult = await sendAppointmentCancelEmail(
+        appointment, 
+        supplier, 
+        cancelReason
+      )
+      
+      if (emailResult.success) {
+        console.log('✅ Cancellation email sent successfully')
+        alert(`✅ Appointment cancelled and notification email sent to ${supplier.supplierName}`)
+      } else {
+        console.error('❌ Failed to send cancellation email:', emailResult.error)
+        alert(`✅ Appointment cancelled, but notification email failed to send. Please contact ${supplier.supplierName} manually.`)
+      }
+    } else {
+      console.warn('⚠️ No email address found for supplier')
+      alert(`✅ Appointment cancelled. Note: Supplier has no email address on file, please contact them manually.`)
     }
   }
 
@@ -503,7 +537,7 @@ export default function AppointmentsPage({
         </CardContent>
       </Card>
 
-      {/* ✅ UPDATED: Dialogs now use email-enabled handlers */}
+      {/* Dialogs */}
       <ScheduleAppointmentDialog
         open={isScheduleDialogOpen}
         onOpenChange={setIsScheduleDialogOpen}
