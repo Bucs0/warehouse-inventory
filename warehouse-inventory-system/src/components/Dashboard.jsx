@@ -1,5 +1,5 @@
 // ============================================
-// UPDATED Dashboard.jsx - WITH APPROVAL BUTTON FOR ADMIN
+// UPDATED Dashboard.jsx - WITH APPROVAL BUTTON AND LOGGING
 // ============================================
 
 import { useState, useEffect } from 'react'
@@ -8,7 +8,7 @@ import { Badge } from './ui/badge'
 import { Button } from './ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
 
-export default function Dashboard({ user, inventoryData, activityLogs, onNavigate }) {
+export default function Dashboard({ user, inventoryData, activityLogs, onNavigate, onLogActivity }) {
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false)
   const [pendingUsers, setPendingUsers] = useState([])
   const [approvedUsers, setApprovedUsers] = useState([])
@@ -40,17 +40,60 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
   }, [approvedUsers])
 
   const handleApproveUser = (userId) => {
-    const user = pendingUsers.find(u => u.id === userId)
-    if (user) {
-      const approvedUser = { ...user, status: 'approved' }
+    const userToApprove = pendingUsers.find(u => u.id === userId)
+    if (userToApprove) {
+      const approvedUser = { ...userToApprove, status: 'approved' }
       setApprovedUsers([...approvedUsers, approvedUser])
       setPendingUsers(pendingUsers.filter(u => u.id !== userId))
+
+      // ✅ ADD TO ACTIVITY LOGS
+      if (onLogActivity) {
+        onLogActivity({
+          id: Date.now(),
+          itemName: `User Account: ${userToApprove.name}`,
+          action: 'Added',
+          userName: user.name,
+          userRole: user.role,
+          timestamp: new Date().toLocaleString('en-PH', {
+            month: '2-digit',
+            day: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+          }),
+          details: `Approved staff account for ${userToApprove.name} (@${userToApprove.username})`
+        })
+      }
     }
   }
 
   const handleRejectUser = (userId) => {
-    if (window.confirm('Are you sure you want to reject this user?')) {
-      setPendingUsers(pendingUsers.filter(u => u.id !== userId))
+    const userToReject = pendingUsers.find(u => u.id === userId)
+    if (userToReject) {
+      if (window.confirm(`Are you sure you want to reject ${userToReject.name}'s signup request?`)) {
+        setPendingUsers(pendingUsers.filter(u => u.id !== userId))
+
+        // ✅ ADD TO ACTIVITY LOGS
+        if (onLogActivity) {
+          onLogActivity({
+            id: Date.now(),
+            itemName: `User Account: ${userToReject.name}`,
+            action: 'Deleted',
+            userName: user.name,
+            userRole: user.role,
+            timestamp: new Date().toLocaleString('en-PH', {
+              month: '2-digit',
+              day: '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true
+            }),
+            details: `Rejected staff signup request from ${userToReject.name} (@${userToReject.username})`
+          })
+        }
+      }
     }
   }
 
@@ -75,8 +118,8 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
         </div>
         
         <div className="flex gap-2">
-          {/* Admin: Show approval button with badge */}
-          {user.role === 'Admin' && pendingUsers.length > 0 && (
+          {/* ✅ ADMIN: Show approval button with badge */}
+          {user.role === 'Admin' && (
             <Button 
               variant="outline"
               onClick={() => setIsApprovalDialogOpen(true)}
@@ -86,7 +129,9 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
               User Approvals
-              <Badge variant="warning" className="ml-2">{pendingUsers.length}</Badge>
+              {pendingUsers.length > 0 && (
+                <Badge variant="warning" className="ml-2">{pendingUsers.length}</Badge>
+              )}
             </Button>
           )}
           
@@ -217,6 +262,9 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
                     <p className="text-sm text-muted-foreground">
                       {log.action} by {log.userName} • {log.timestamp}
                     </p>
+                    {log.details && (
+                      <p className="text-sm text-muted-foreground mt-1">{log.details}</p>
+                    )}
                   </div>
 
                   <Badge variant={
@@ -233,7 +281,7 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
         </CardContent>
       </Card>
 
-      {/* Approval Dialog */}
+      {/* ✅ APPROVAL DIALOG */}
       <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -258,25 +306,25 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
                   {pendingUsers.length} pending approval(s)
                 </p>
                 
-                {pendingUsers.map(user => (
-                  <div key={user.id} className="border rounded-lg p-4 bg-yellow-50 border-yellow-200">
+                {pendingUsers.map(pendingUser => (
+                  <div key={pendingUser.id} className="border rounded-lg p-4 bg-yellow-50 border-yellow-200">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-semibold text-lg">{user.name}</h3>
+                          <h3 className="font-semibold text-lg">{pendingUser.name}</h3>
                           <Badge variant="warning">Pending</Badge>
                         </div>
                         <div className="space-y-1 text-sm">
-                          <p><strong>Username:</strong> {user.username}</p>
-                          <p><strong>Email:</strong> {user.email}</p>
-                          <p><strong>Role:</strong> {user.role}</p>
-                          <p><strong>Signup Date:</strong> {user.signupDate}</p>
+                          <p><strong>Username:</strong> {pendingUser.username}</p>
+                          <p><strong>Email:</strong> {pendingUser.email}</p>
+                          <p><strong>Role:</strong> {pendingUser.role}</p>
+                          <p><strong>Signup Date:</strong> {pendingUser.signupDate}</p>
                         </div>
                       </div>
                       <div className="flex gap-2">
                         <Button
                           size="sm"
-                          onClick={() => handleApproveUser(user.id)}
+                          onClick={() => handleApproveUser(pendingUser.id)}
                           className="bg-green-600 hover:bg-green-700"
                         >
                           <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -287,7 +335,7 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
                         <Button
                           size="sm"
                           variant="destructive"
-                          onClick={() => handleRejectUser(user.id)}
+                          onClick={() => handleRejectUser(pendingUser.id)}
                         >
                           <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -306,11 +354,11 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
               <div className="mt-8 pt-8 border-t">
                 <h3 className="font-semibold mb-4">Approved Staff Members ({approvedUsers.length})</h3>
                 <div className="space-y-2">
-                  {approvedUsers.map(user => (
-                    <div key={user.id} className="border rounded p-3 bg-green-50 border-green-200 flex items-center justify-between">
+                  {approvedUsers.map(approvedUser => (
+                    <div key={approvedUser.id} className="border rounded p-3 bg-green-50 border-green-200 flex items-center justify-between">
                       <div>
-                        <p className="font-medium">{user.name}</p>
-                        <p className="text-sm text-muted-foreground">@{user.username} • {user.email}</p>
+                        <p className="font-medium">{approvedUser.name}</p>
+                        <p className="text-sm text-muted-foreground">@{approvedUser.username} • {approvedUser.email}</p>
                       </div>
                       <Badge variant="success">Approved</Badge>
                     </div>
