@@ -1,7 +1,7 @@
 // ============================================
-// FILE: src/components/ActivityLogs.jsx (UPDATED)
+// FILE: src/components/ActivityLogs.jsx (UPDATED - WITH EXPORT)
 // ============================================
-// Activity logs with month and year filtering
+// ✅ UPDATED: Added full export functionality with multiple formats
 
 import { useState, useMemo } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card'
@@ -10,6 +10,7 @@ import { Badge } from './ui/badge'
 import { Input } from './ui/input'
 import { Button } from './ui/button'
 import { Select } from './ui/select'
+import ExportDialog from './ExportDialog'
 
 const MONTHS = [
   { value: '01', label: 'January' },
@@ -26,37 +27,34 @@ const MONTHS = [
   { value: '12', label: 'December' }
 ]
 
-export default function ActivityLogs({ activityLogs }) {
+export default function ActivityLogs({ activityLogs, currentUser }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterAction, setFilterAction] = useState('all')
   const [selectedMonth, setSelectedMonth] = useState('all')
   const [selectedYear, setSelectedYear] = useState('all')
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
 
   // Get unique years from logs
   const availableYears = useMemo(() => {
     const years = new Set()
     activityLogs.forEach(log => {
-      // Parse date from timestamp (format: MM/DD/YYYY HH:MM AM/PM)
       const dateMatch = log.timestamp.match(/(\d{2})\/(\d{2})\/(\d{4})/)
       if (dateMatch) {
-        years.add(dateMatch[3]) // Year
+        years.add(dateMatch[3])
       }
     })
-    return Array.from(years).sort((a, b) => b - a) // Sort descending
+    return Array.from(years).sort((a, b) => b - a)
   }, [activityLogs])
 
   // Filter logs
   const filteredLogs = activityLogs.filter(log => {
-    // Search filter
     const matchesSearch = 
       log.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       log.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       log.action.toLowerCase().includes(searchTerm.toLowerCase())
     
-    // Action filter
     const matchesAction = filterAction === 'all' || log.action === filterAction
 
-    // Month/Year filter
     let matchesDate = true
     if (selectedMonth !== 'all' || selectedYear !== 'all') {
       const dateMatch = log.timestamp.match(/(\d{2})\/(\d{2})\/(\d{4})/)
@@ -91,6 +89,14 @@ export default function ActivityLogs({ activityLogs }) {
     setSelectedYear('all')
   }
 
+  // Get current filters for export
+  const getCurrentFilters = () => ({
+    action: filterAction,
+    month: selectedMonth,
+    year: selectedYear,
+    searchTerm
+  })
+
   return (
     <div className="space-y-4">
       <Card>
@@ -103,17 +109,20 @@ export default function ActivityLogs({ activityLogs }) {
               </p>
             </div>
             
-            <Button variant="outline" disabled>
+            {/* ✅ UPDATED: Export button now functional */}
+            <Button 
+              onClick={() => setIsExportDialogOpen(true)}
+              className="bg-green-600 hover:bg-green-700"
+            >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              Export (Coming Soon)
+              Export Report
             </Button>
           </div>
 
           {/* Month and Year Filter Row */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-            {/* Month Selector */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Filter by Month</label>
               <Select
@@ -129,7 +138,6 @@ export default function ActivityLogs({ activityLogs }) {
               </Select>
             </div>
 
-            {/* Year Selector */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Filter by Year</label>
               <Select
@@ -145,7 +153,6 @@ export default function ActivityLogs({ activityLogs }) {
               </Select>
             </div>
 
-            {/* Reset Button */}
             <div className="space-y-2">
               <label className="text-sm font-medium opacity-0">Reset</label>
               <Button
@@ -359,6 +366,15 @@ export default function ActivityLogs({ activityLogs }) {
           )}
         </CardContent>
       </Card>
+
+      {/* ✅ NEW: Export Dialog */}
+      <ExportDialog
+        open={isExportDialogOpen}
+        onOpenChange={setIsExportDialogOpen}
+        activityLogs={activityLogs}
+        filters={getCurrentFilters()}
+        currentUser={currentUser}
+      />
     </div>
   )
 }
