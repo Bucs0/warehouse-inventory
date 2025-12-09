@@ -1,7 +1,4 @@
-// ============================================
-// FILE: src/components/CategoriesPage.jsx
-// ============================================
-// Category Management - View, Add, Edit, Delete categories
+
 // Admin: Full access | Staff: View only
 
 import { useState } from 'react'

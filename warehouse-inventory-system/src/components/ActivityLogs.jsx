@@ -1,7 +1,4 @@
-// ============================================
-// FILE: src/components/ActivityLogs.jsx (UPDATED - WITH EXPORT)
-// ============================================
-// ✅ UPDATED: Added full export functionality with multiple formats
+
 
 import { useState, useMemo } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card'
@@ -367,7 +364,7 @@ export default function ActivityLogs({ activityLogs, currentUser }) {
         </CardContent>
       </Card>
 
-      {/* ✅ NEW: Export Dialog */}
+      {/* Export Dialog */}
       <ExportDialog
         open={isExportDialogOpen}
         onOpenChange={setIsExportDialogOpen}

@@ -1,6 +1,4 @@
-// ============================================
-// FILE: src/components/EditAppointmentDialog.jsx
-// ============================================
+
 // Dialog for editing existing appointment
 
 import { useState, useEffect } from 'react'

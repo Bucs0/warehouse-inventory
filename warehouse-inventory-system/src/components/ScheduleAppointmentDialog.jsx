@@ -1,7 +1,3 @@
-// ============================================
-// FILE: src/components/ScheduleAppointmentDialog.jsx (FIXED)
-// ============================================
-// FIXED: Item selection now properly adds items to the appointment
 
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog'

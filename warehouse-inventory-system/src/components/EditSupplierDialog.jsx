@@ -1,6 +1,4 @@
-// ============================================
-// FILE: src/components/EditSupplierDialog.jsx
-// ============================================
+
 // Dialog for editing existing supplier
 
 import { useState, useEffect } from 'react'

@@ -1,9 +1,4 @@
-// ============================================
-// FILE: src/lib/emailService.js (UPDATED - Added Cancel Notification)
-// ============================================
-// ✅ NEW: Added sendAppointmentCancelEmail function
-
-// ✅ Your EmailJS credentials
+// Email Service for Warehouse Inventory System
 const EMAILJS_SERVICE_ID = 'service_an2ngeg'
 const EMAILJS_TEMPLATE_ID_LOW_STOCK = 'template_l3vz6al'
 const EMAILJS_TEMPLATE_ID_APPOINTMENT = 'template_x3a2ecb'

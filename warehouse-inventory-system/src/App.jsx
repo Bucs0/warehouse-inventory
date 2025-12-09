@@ -14,14 +14,14 @@ import AppointmentsPage from './components/AppointmentsPage'
 import DamagedItemsPage from './components/DamagedItemsPage'
 import ActivityLogs from './components/ActivityLogs'
 
-// ✅ NEW: Import email service
+// Import email service
 import { sendLowStockAlert, sendAppointmentEmail } from './lib/emailService'
 
-// ✅ IMPORTANT: Set your admin email here
+// admin email here
 const ADMIN_EMAIL = 'markjadebucao10@gmail.com' // Change this to your actual admin email
 
 export default function App() {
-  // ========== STATE MANAGEMENT ==========
+  // = STATE MANAGEMENT 
   
   const [currentUser, setCurrentUser] = useState(null)
   const [currentPage, setCurrentPage] = useState('dashboard')
@@ -248,7 +248,7 @@ export default function App() {
     return saved ? JSON.parse(saved) : []
   })
 
-  // ✅ FIXED: Track which items we've already sent low stock alerts for
+  //Track which items we've already sent low stock alerts for
   const [lowStockAlertsSent, setLowStockAlertsSent] = useState(() => {
     const saved = localStorage.getItem('lowStockAlertsSent')
     return saved ? JSON.parse(saved) : []
@@ -287,7 +287,7 @@ export default function App() {
     localStorage.setItem('lowStockAlertsSent', JSON.stringify(lowStockAlertsSent))
   }, [lowStockAlertsSent])
 
-  // ✅ FIXED: Use a locking mechanism to prevent duplicate alerts from multiple tabs
+  // Use a locking mechanism to prevent duplicate alerts from multiple tabs
   useEffect(() => {
     if (!currentUser) return
 
@@ -299,7 +299,7 @@ export default function App() {
 
       if (lowStockItems.length === 0) return
 
-      // ✅ NEW: Try to acquire lock for this check cycle
+      // Try to acquire lock for this check cycle
       const lockKey = 'lowStockAlertLock'
       const lockTimeout = 10000 // 10 seconds
       const currentTime = Date.now()
@@ -315,7 +315,7 @@ export default function App() {
         }
       }
 
-      // ✅ NEW: Acquire lock
+      //  Acquire lock
       const lockData = {
         timestamp: currentTime,
         tabId: Math.random().toString(36).substr(2, 9)
@@ -332,7 +332,7 @@ export default function App() {
         return
       }
 
-      // ✅ Now send emails - only this tab will do it
+      // send emails - only this tab will do it
       for (const item of lowStockItems) {
         const result = await sendLowStockAlert(item, ADMIN_EMAIL)
         

@@ -1,6 +1,4 @@
-// ============================================
-// UPDATED Dashboard.jsx - WITH APPROVAL BUTTON AND LOGGING
-// ============================================
+
 
 import { useState, useEffect } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card'
@@ -46,7 +44,7 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
       setApprovedUsers([...approvedUsers, approvedUser])
       setPendingUsers(pendingUsers.filter(u => u.id !== userId))
 
-      // ✅ ADD TO ACTIVITY LOGS
+      //ADD TO ACTIVITY LOGS
       if (onLogActivity) {
         onLogActivity({
           id: Date.now(),

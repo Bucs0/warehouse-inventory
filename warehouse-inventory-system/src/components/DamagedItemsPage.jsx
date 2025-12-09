@@ -1,6 +1,4 @@
-// ============================================
-// FILE: src/components/DamagedItemsPage.jsx
-// ============================================
+
 // Separate page for managing damaged items
 // Options: Mark as Thrown or In Standby
 

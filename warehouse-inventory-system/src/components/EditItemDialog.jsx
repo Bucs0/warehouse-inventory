@@ -1,6 +1,4 @@
-// ============================================
-// FILE: src/components/EditItemDialog.jsx (UPDATED)
-// ============================================
+
 // Dialog para sa pag-edit ng existing item
 // Now with supplier dropdown!
 

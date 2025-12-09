@@ -1,6 +1,4 @@
-// ============================================
-// FILE: src/components/InventoryTable.jsx (COMPLETE UPDATED)
-// ============================================
+
 
 import { useState } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card'

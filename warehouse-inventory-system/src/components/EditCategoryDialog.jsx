@@ -1,6 +1,4 @@
-// ============================================
-// FILE: src/components/EditCategoryDialog.jsx
-// ============================================
+
 // Dialog for editing existing category
 
 import { useState, useEffect } from 'react'

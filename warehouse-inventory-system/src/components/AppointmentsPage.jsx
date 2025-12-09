@@ -1,7 +1,4 @@
-// ============================================
-// FILE: src/components/AppointmentsPage.jsx (UPDATED - Cancel Email)
-// ============================================
-// ✅ UPDATED: Now sends cancellation email to supplier
+
 
 import { useState } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card'
@@ -13,7 +10,7 @@ import ScheduleAppointmentDialog from './ScheduleAppointmentDialog'
 import EditAppointmentDialog from './EditAppointmentDialog'
 import ViewAppointmentDialog from './ViewAppointmentDialog'
 
-// ✅ UPDATED: Import the new cancel email function
+//Import the new cancel email function
 import { sendAppointmentEmail, sendAppointmentCancelEmail } from '../lib/emailService'
 
 export default function AppointmentsPage({ 

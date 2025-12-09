@@ -1,6 +1,4 @@
-// ============================================
-// FILE: src/components/AddItemDialog.jsx (UPDATED)
-// ============================================
+
 // Dialog for adding new item with supplier dropdown
 
 import { useState } from 'react'

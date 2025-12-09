@@ -1,6 +1,4 @@
-// ============================================
-// FILE: src/lib/reportGenerator.js (NEW)
-// ============================================
+
 // Report Generator Service - Export activity logs and inventory data
 // Supports: CSV, PDF (via jsPDF), and Excel (via SheetJS)
 

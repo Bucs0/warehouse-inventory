@@ -1,6 +1,4 @@
-// ============================================
-// FILE: src/components/NewItemQuickAddDialog.jsx (NEW)
-// ============================================
+
 // Quick dialog for adding item info when creating supplier with new items
 
 import { useState, useEffect } from 'react'

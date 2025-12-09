@@ -1,7 +1,4 @@
-// ============================================
-// FILE: src/components/ExportDialog.jsx (NEW - COMPLETE IMPLEMENTATION)
-// ============================================
-// ✅ NEW: Full-featured export dialog with CSV, PDF, Excel formats
+
 
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog'

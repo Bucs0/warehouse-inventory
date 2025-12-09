@@ -1,6 +1,4 @@
-// ============================================
-// FILE: src/components/ViewAppointmentDialog.jsx
-// ============================================
+
 // Dialog for viewing appointment details (read-only)
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog'

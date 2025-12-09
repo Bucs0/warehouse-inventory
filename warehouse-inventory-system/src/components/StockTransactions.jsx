@@ -1,6 +1,4 @@
-// ============================================
-// FILE: src/components/StockTransactions.jsx (UPDATED)
-// ============================================
+
 // Stock Transaction with search bar and better item identification
 
 import { useState } from 'react'

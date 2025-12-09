@@ -1,6 +1,3 @@
-// ============================================
-// FILE: src/components/SuppliersPage.jsx (COMPLETE UPDATED)
-// ============================================
 
 import { useState } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card'

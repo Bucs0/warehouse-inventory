@@ -1,7 +1,5 @@
-// ============================================
-// FILE: src/components/EmailSettingsDialog.jsx (NEW)
-// ============================================
-// Optional: Email configuration and testing dialog for admins
+
+// Email configuration and testing dialog for admins
 
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog'

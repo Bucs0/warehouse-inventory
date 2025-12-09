@@ -1,6 +1,4 @@
-// ============================================
-// FILE: src/components/AddCategoryDialog.jsx
-// ============================================
+
 // Dialog for adding new category
 
 import { useState } from 'react'

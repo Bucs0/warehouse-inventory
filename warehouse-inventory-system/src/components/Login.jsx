@@ -1,6 +1,4 @@
-// ============================================
-// COMPLETE UPDATED Login.jsx - FIXED LOGIN & APPROVAL FLOW
-// ============================================
+
 
 import { useState, useEffect } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card'
