@@ -57,7 +57,7 @@ export default function AppointmentsPage({
     return appointmentDate >= today && appointmentDate <= nextWeek && a.status !== 'completed' && a.status !== 'cancelled'
   }).length
 
-  // Enhanced schedule handler with email notification
+  // schedule handler with email notification
   const handleScheduleWithEmail = async (appointment) => {
     onScheduleAppointment(appointment)
 
@@ -81,7 +81,7 @@ export default function AppointmentsPage({
     }
   }
 
-  // Enhanced edit handler with email notification
+  // edit handler with email notification
   const handleEditWithEmail = async (updatedAppointment) => {
     onEditAppointment(updatedAppointment)
 
@@ -114,7 +114,7 @@ export default function AppointmentsPage({
     }
   }
 
-  // ✅ UPDATED: Now sends cancellation email
+  // Now sends cancellation email
   const handleCancel = async (appointment) => {
     // Prompt for cancellation reason
     const cancelReason = prompt(

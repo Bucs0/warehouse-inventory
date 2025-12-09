@@ -72,7 +72,7 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
       if (window.confirm(`Are you sure you want to reject ${userToReject.name}'s signup request?`)) {
         setPendingUsers(pendingUsers.filter(u => u.id !== userId))
 
-        // ✅ ADD TO ACTIVITY LOGS
+        //ADD TO ACTIVITY LOGS
         if (onLogActivity) {
           onLogActivity({
             id: Date.now(),
@@ -116,7 +116,7 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
         </div>
         
         <div className="flex gap-2">
-          {/* ✅ ADMIN: Show approval button with badge */}
+          {/*Show approval button with badge */}
           {user.role === 'Admin' && (
             <Button 
               variant="outline"
@@ -279,7 +279,7 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
         </CardContent>
       </Card>
 
-      {/* ✅ APPROVAL DIALOG */}
+      {/* APPROVAL DIALOG */}
       <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>

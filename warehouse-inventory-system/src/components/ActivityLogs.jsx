@@ -106,7 +106,7 @@ export default function ActivityLogs({ activityLogs, currentUser }) {
               </p>
             </div>
             
-            {/* ✅ UPDATED: Export button now functional */}
+            {/* Export button*/}
             <Button 
               onClick={() => setIsExportDialogOpen(true)}
               className="bg-green-600 hover:bg-green-700"

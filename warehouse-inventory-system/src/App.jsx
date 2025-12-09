@@ -1,7 +1,5 @@
-// ============================================
-// FILE: src/App.jsx (FIXED - Prevents duplicate email alerts)
-// ============================================
-// ✅ FIXED: Added tab locking to prevent duplicate alerts when multiple tabs are open
+
+
 
 import { useState, useEffect } from 'react'
 import Login from './components/Login'
@@ -979,7 +977,7 @@ export default function App() {
     }
   }
 
-  // ========== RENDER ==========
+  //  RENDER 
 
   if (!currentUser) {
     return <Login onLogin={handleLogin} />
@@ -1145,7 +1143,7 @@ export default function App() {
           />
         )}
 
-        {/* ✅ UPDATED: Added suppliers and categories props */}
+        {/*suppliers and categories props */}
         {currentPage === 'inventory' && currentUser.role === 'Admin' && (
           <InventoryTable
             user={currentUser}
@@ -1158,7 +1156,7 @@ export default function App() {
           />
         )}
 
-        {/* ✅ UPDATED: Added categories and onAddItem props */}
+        {/*categories and onAddItem props */}
         {currentPage === 'suppliers' && (
           <SuppliersPage
             user={currentUser}
