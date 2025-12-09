@@ -86,13 +86,7 @@ export default function InventoryTable({
               >
                 Low Stock ({inventoryData.filter(i => i.quantity <= i.reorderLevel).length})
               </Button>
-              <Button 
-                variant={filterStatus === 'damaged' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setFilterStatus('damaged')}
-              >
-                Damaged ({inventoryData.filter(i => i.damagedStatus === 'Damaged').length})
-              </Button>
+              
             </div>
           </div>
         </CardHeader>
