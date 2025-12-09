@@ -1,7 +1,7 @@
 // ============================================
-// FILE: src/App.jsx (UPDATED - WITH EMAIL NOTIFICATIONS)
+// FILE: src/App.jsx (FIXED - Prevents duplicate email alerts)
 // ============================================
-// ✅ ADDED: Email notifications for low stock alerts and appointments
+// ✅ FIXED: Added tab locking to prevent duplicate alerts when multiple tabs are open
 
 import { useState, useEffect } from 'react'
 import Login from './components/Login'
@@ -248,7 +248,7 @@ export default function App() {
     return saved ? JSON.parse(saved) : []
   })
 
-  // ✅ NEW: Track which items we've already sent low stock alerts for
+  // ✅ FIXED: Track which items we've already sent low stock alerts for
   const [lowStockAlertsSent, setLowStockAlertsSent] = useState(() => {
     const saved = localStorage.getItem('lowStockAlertsSent')
     return saved ? JSON.parse(saved) : []
@@ -287,16 +287,52 @@ export default function App() {
     localStorage.setItem('lowStockAlertsSent', JSON.stringify(lowStockAlertsSent))
   }, [lowStockAlertsSent])
 
-  // ✅ NEW: Check for low stock items and send email alerts
+  // ✅ FIXED: Use a locking mechanism to prevent duplicate alerts from multiple tabs
   useEffect(() => {
-    if (!currentUser) return // Don't check if not logged in
+    if (!currentUser) return
 
     const checkLowStock = async () => {
       const lowStockItems = inventoryData.filter(item => 
         item.quantity <= item.reorderLevel && 
-        !lowStockAlertsSent.includes(item.id) // Only send if not already sent
+        !lowStockAlertsSent.includes(item.id)
       )
 
+      if (lowStockItems.length === 0) return
+
+      // ✅ NEW: Try to acquire lock for this check cycle
+      const lockKey = 'lowStockAlertLock'
+      const lockTimeout = 10000 // 10 seconds
+      const currentTime = Date.now()
+
+      // Check if another tab has the lock
+      const existingLock = localStorage.getItem(lockKey)
+      if (existingLock) {
+        const lockData = JSON.parse(existingLock)
+        // If lock is still valid (less than 10 seconds old), skip
+        if (currentTime - lockData.timestamp < lockTimeout) {
+          console.log('⏭️ Another tab is handling low stock alerts, skipping...')
+          return
+        }
+      }
+
+      // ✅ NEW: Acquire lock
+      const lockData = {
+        timestamp: currentTime,
+        tabId: Math.random().toString(36).substr(2, 9)
+      }
+      localStorage.setItem(lockKey, JSON.stringify(lockData))
+
+      // Wait a bit to ensure no race condition
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      // Verify we still have the lock
+      const currentLock = localStorage.getItem(lockKey)
+      if (!currentLock || JSON.parse(currentLock).tabId !== lockData.tabId) {
+        console.log('⏭️ Lost lock to another tab, skipping...')
+        return
+      }
+
+      // ✅ Now send emails - only this tab will do it
       for (const item of lowStockItems) {
         const result = await sendLowStockAlert(item, ADMIN_EMAIL)
         
@@ -328,16 +364,29 @@ export default function App() {
           console.error(`❌ Failed to send alert for: ${item.itemName}`)
         }
       }
+
+      // ✅ Release lock after completion
+      localStorage.removeItem(lockKey)
     }
 
-    // Check every 30 seconds
+    // Check immediately
     checkLowStock()
+    
+    // Then check every 30 seconds
     const interval = setInterval(checkLowStock, 30000)
 
-    return () => clearInterval(interval)
+    return () => {
+      clearInterval(interval)
+      // Clean up lock on unmount
+      const lockKey = 'lowStockAlertLock'
+      const existingLock = localStorage.getItem(lockKey)
+      if (existingLock) {
+        localStorage.removeItem(lockKey)
+      }
+    }
   }, [inventoryData, currentUser, lowStockAlertsSent])
 
-  // ✅ NEW: Clear low stock alerts when stock is replenished above reorder level
+  // ✅ Clear low stock alerts when stock is replenished above reorder level
   useEffect(() => {
     const restockedItems = inventoryData.filter(item => 
       item.quantity > item.reorderLevel && 
@@ -368,6 +417,8 @@ export default function App() {
         setAppointments(JSON.parse(e.newValue))
       } else if (e.key === 'damagedItems' && e.newValue) {
         setDamagedItems(JSON.parse(e.newValue))
+      } else if (e.key === 'lowStockAlertsSent' && e.newValue) {
+        setLowStockAlertsSent(JSON.parse(e.newValue))
       }
     }
 
@@ -375,7 +426,7 @@ export default function App() {
     return () => window.removeEventListener('storage', handleStorageChange)
   }, [])
 
-  // ========== HANDLER FUNCTIONS ==========
+  // ========== HANDLER FUNCTIONS (unchanged) ==========
   
   const handleLogin = (user) => {
     setCurrentUser(user)
