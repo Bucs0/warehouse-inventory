@@ -1,4 +1,8 @@
-// ✅ UPDATED: Added locations prop to function signature and passed it to NewItemQuickAddDialog
+// ===================================================================
+// COMPONENT: SuppliersPage.jsx
+// STATUS: ✅ FIXED - Added locations prop to NewItemQuickAddDialog
+// CHANGES: Pass locations to NewItemQuickAddDialog for proper item creation
+// ===================================================================
 
 import { useState } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card'
@@ -15,7 +19,7 @@ export default function SuppliersPage({
   suppliers, 
   inventoryData, 
   categories,
-  locations = [], // ✅ ADDED: locations prop
+  locations = [], // ✅ FIXED: locations prop added and used
   onAddSupplier, 
   onEditSupplier, 
   onDeleteSupplier,
@@ -37,7 +41,7 @@ export default function SuppliersPage({
     const matchesSearch = 
       supplier.supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       supplier.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      supplier.contactEmail.toLowerCase().includes(searchTerm.toLowerCase())
+      (supplier.contactEmail && supplier.contactEmail.toLowerCase().includes(searchTerm.toLowerCase()))
     
     let matchesStatus = true
     if (filterStatus === 'active') {
@@ -277,11 +281,15 @@ export default function SuppliersPage({
                       <TableCell className="font-medium">{supplier.supplierName}</TableCell>
                       <TableCell>{supplier.contactPerson}</TableCell>
                       <TableCell>
-                        <a href={`mailto:${supplier.contactEmail}`} className="text-blue-600 hover:underline">
-                          {supplier.contactEmail}
-                        </a>
+                        {supplier.contactEmail ? (
+                          <a href={`mailto:${supplier.contactEmail}`} className="text-blue-600 hover:underline">
+                            {supplier.contactEmail}
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground">No email</span>
+                        )}
                       </TableCell>
-                      <TableCell>{supplier.contactPhone}</TableCell>
+                      <TableCell>{supplier.contactPhone || 'No phone'}</TableCell>
                       <TableCell>
                         <Badge variant="outline">{getSupplierItemCount(supplier.id)} items</Badge>
                       </TableCell>
@@ -344,7 +352,7 @@ export default function SuppliersPage({
         />
       )}
 
-      {/* ✅ UPDATED: Added locations prop to NewItemQuickAddDialog */}
+      {/* ✅ FIXED: Added locations prop */}
       {pendingNewItems.length > 0 && (
         <NewItemQuickAddDialog
           open={isNewItemDialogOpen}
@@ -359,7 +367,7 @@ export default function SuppliersPage({
           }}
           itemName={pendingNewItems[currentNewItemIndex]}
           categories={categories}
-          locations={locations} // ✅ ADDED: Pass locations to dialog
+          locations={locations}
           onComplete={handleNewItemComplete}
         />
       )}
