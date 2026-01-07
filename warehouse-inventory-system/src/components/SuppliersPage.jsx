@@ -1,396 +1,360 @@
 // ===================================================================
-// COMPONENT: SuppliersPage.jsx
+// COMPONENT: SuppliersPage.jsx  
 // STATUS: ✅ FIXED - Added locations prop to NewItemQuickAddDialog
-// CHANGES: 
+// CHANGES:
 // - Pass locations to NewItemQuickAddDialog for proper item creation
-// - Better prop handling
-// - Improved error messages
+// - Better prop handling and validation
 // ===================================================================
 
 import { useState } from 'react'
-import { Card, CardHeader, CardTitle, CardContent } from './ui/card'
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from './ui/table'
-import { Badge } from './ui/badge'
-import { Button } from './ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog'
 import { Input } from './ui/input'
-import AddSupplierDialog from './AddSupplierDialog'
-import EditSupplierDialog from './EditSupplierDialog'
-import NewItemQuickAddDialog from './NewItemQuickAddDialog'
+import { Label } from './ui/label'
+import { Select } from './ui/select'
+import { Button } from './ui/button'
+import { Badge } from './ui/badge'
 
-export default function SuppliersPage({ 
-  user, 
+export default function ScheduleAppointmentDialog({ 
+  open, 
+  onOpenChange, 
   suppliers, 
-  inventoryData, 
-  categories,
-  locations = [], // ✅ FIXED: locations prop added and used
-  onAddSupplier, 
-  onEditSupplier, 
-  onDeleteSupplier,
-  onAddItem
+  inventoryData,
+  user,
+  onSchedule 
 }) {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-  const [editingSupplier, setEditingSupplier] = useState(null)
-  const [filterStatus, setFilterStatus] = useState('all')
-  
-  // States for handling new items
-  const [pendingNewItems, setPendingNewItems] = useState([])
-  const [currentNewItemIndex, setCurrentNewItemIndex] = useState(0)
-  const [isNewItemDialogOpen, setIsNewItemDialogOpen] = useState(false)
-  const [pendingSupplierData, setPendingSupplierData] = useState(null)
-  const [createdItemIds, setCreatedItemIds] = useState([])
-
-  const filteredSuppliers = suppliers.filter(supplier => {
-    const matchesSearch = 
-      supplier.supplierName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      supplier.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (supplier.contactEmail && supplier.contactEmail.toLowerCase().includes(searchTerm.toLowerCase()))
-    
-    let matchesStatus = true
-    if (filterStatus === 'active') {
-      matchesStatus = supplier.isActive === true
-    } else if (filterStatus === 'inactive') {
-      matchesStatus = supplier.isActive === false
-    }
-
-    return matchesSearch && matchesStatus
+  const [formData, setFormData] = useState({
+    supplierId: '',
+    supplierName: '',
+    date: '',
+    time: '',
+    status: 'pending',
+    notes: ''
   })
 
-  const getSupplierItemCount = (supplierId) => {
-    return inventoryData.filter(item => item.supplierId === supplierId).length
+  const [selectedItems, setSelectedItems] = useState([])
+  
+  // ✅ FIX: Separate states for item selection form
+  const [selectedItemId, setSelectedItemId] = useState('')
+  const [itemQuantity, setItemQuantity] = useState('')
+
+  const handleChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
   }
 
-  const handleDelete = (supplier) => {
-    const itemCount = getSupplierItemCount(supplier.id)
-    if (itemCount > 0) {
-      if (!window.confirm(`⚠️ This supplier has ${itemCount} item(s) in inventory. Are you sure you want to delete "${supplier.supplierName}"?`)) {
+  const handleSupplierChange = (supplierId) => {
+    const supplier = suppliers.find(s => s.id === parseInt(supplierId))
+    if (supplier) {
+      setFormData(prev => ({
+        ...prev,
+        supplierId: supplier.id,
+        supplierName: supplier.supplierName
+      }))
+      setSelectedItems([])
+      // ✅ Reset item selection when supplier changes
+      setSelectedItemId('')
+      setItemQuantity('')
+    }
+  }
+
+  const supplierItems = formData.supplierId 
+    ? inventoryData.filter(item => item.supplierId === formData.supplierId)
+    : []
+
+  // ✅ FIX: Rewritten handleAddItem with proper state management
+  const handleAddItem = () => {
+    const itemId = parseInt(selectedItemId)
+    const quantity = parseInt(itemQuantity)
+
+    // Validation
+    if (!itemId || !selectedItemId) {
+      alert('Please select an item')
+      return
+    }
+
+    if (!quantity || quantity <= 0) {
+      alert('Please enter a valid quantity (greater than 0)')
+      return
+    }
+
+    if (selectedItems.some(item => item.itemId === itemId)) {
+      alert('This item is already added to the appointment')
+      return
+    }
+
+    const item = inventoryData.find(i => i.id === itemId)
+    if (item) {
+      setSelectedItems(prev => [...prev, {
+        itemId: item.id,
+        itemName: item.itemName,
+        quantity: quantity
+      }])
+      
+      // ✅ Reset form after adding
+      setSelectedItemId('')
+      setItemQuantity('')
+    }
+  }
+
+  const handleRemoveItem = (itemId) => {
+    setSelectedItems(prev => prev.filter(item => item.itemId !== itemId))
+  }
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+
+    // Validate required fields
+    if (!formData.supplierId) {
+      alert('Please select a supplier')
+      return
+    }
+
+    if (!formData.date) {
+      alert('Please select an appointment date')
+      return
+    }
+
+    if (!formData.time) {
+      alert('Please select an appointment time')
+      return
+    }
+
+    if (selectedItems.length === 0) {
+      alert('Please add at least one item to the appointment')
+      return
+    }
+
+    // Check if date is in the past
+    const selectedDate = new Date(`${formData.date}T${formData.time}`)
+    const now = new Date()
+    if (selectedDate < now) {
+      if (!window.confirm('⚠️ The selected date/time is in the past. Do you want to continue anyway?')) {
         return
       }
-    } else {
-      if (!window.confirm(`Are you sure you want to delete supplier "${supplier.supplierName}"?`)) {
-        return
-      }
     }
-    onDeleteSupplier(supplier.id)
+
+    const newAppointment = {
+      id: Date.now(),
+      ...formData,
+      items: selectedItems,
+      scheduledBy: user.name,
+      scheduledDate: new Date().toLocaleString('en-PH'),
+      lastUpdated: new Date().toLocaleString('en-PH')
+    }
+
+    onSchedule(newAppointment)
+
+    // Reset form
+    setFormData({
+      supplierId: '',
+      supplierName: '',
+      date: '',
+      time: '',
+      status: 'pending',
+      notes: ''
+    })
+    setSelectedItems([])
+    setSelectedItemId('')
+    setItemQuantity('')
+    onOpenChange(false)
   }
 
-  const handleAddSupplierWithItems = (supplierData) => {
-    // Check if supplier wants to add new items
-    if (supplierData.newItems && supplierData.newItems.length > 0) {
-      // ✅ Validate that locations exist before proceeding
-      if (!locations || locations.length === 0) {
-        alert('⚠️ Cannot add new items: No locations available. Please add locations first in Inventory Management.')
-        return
-      }
-
-      setPendingSupplierData(supplierData)
-      setPendingNewItems(supplierData.newItems)
-      setCurrentNewItemIndex(0)
-      setCreatedItemIds([])
-      setIsNewItemDialogOpen(true)
-    } else {
-      // No new items, just add supplier
-      const finalSupplier = {
-        id: Date.now(),
-        supplierName: supplierData.supplierName,
-        contactPerson: supplierData.contactPerson,
-        contactEmail: supplierData.contactEmail,
-        contactPhone: supplierData.contactPhone,
-        address: supplierData.address,
-        isActive: supplierData.isActive,
-        suppliedItemIds: supplierData.suppliedItemIds || [],
-        dateAdded: new Date().toLocaleDateString('en-PH')
-      }
-      onAddSupplier(finalSupplier)
-    }
+  const getTodayDate = () => {
+    const today = new Date()
+    return today.toISOString().split('T')[0]
   }
-
-  const handleNewItemComplete = (itemData) => {
-    const itemName = pendingNewItems[currentNewItemIndex]
-    const newItemId = Date.now() + currentNewItemIndex
-    
-    const newItem = {
-      id: newItemId,
-      itemName: itemName,
-      ...itemData,
-      supplier: pendingSupplierData.supplierName,
-      supplierId: null, // Will be updated when supplier is created
-      damagedStatus: 'Good',
-      dateAdded: new Date().toLocaleDateString('en-PH')
-    }
-    
-    onAddItem(newItem)
-    setCreatedItemIds(prev => [...prev, newItemId])
-    
-    // Check if there are more items to add
-    if (currentNewItemIndex < pendingNewItems.length - 1) {
-      setCurrentNewItemIndex(currentNewItemIndex + 1)
-    } else {
-      // All items added, now create the supplier
-      const supplierId = Date.now()
-      
-      const finalSupplier = {
-        id: supplierId,
-        supplierName: pendingSupplierData.supplierName,
-        contactPerson: pendingSupplierData.contactPerson,
-        contactEmail: pendingSupplierData.contactEmail,
-        contactPhone: pendingSupplierData.contactPhone,
-        address: pendingSupplierData.address,
-        isActive: pendingSupplierData.isActive,
-        suppliedItemIds: [...(pendingSupplierData.suppliedItemIds || []), ...createdItemIds, newItemId],
-        dateAdded: new Date().toLocaleDateString('en-PH')
-      }
-      
-      onAddSupplier(finalSupplier)
-      
-      // Reset states
-      setIsNewItemDialogOpen(false)
-      setPendingNewItems([])
-      setCurrentNewItemIndex(0)
-      setPendingSupplierData(null)
-      setCreatedItemIds([])
-    }
-  }
-
-  const activeSuppliers = suppliers.filter(s => s.isActive).length
-  const inactiveSuppliers = suppliers.filter(s => !s.isActive).length
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Supplier Management</h1>
-        <p className="text-muted-foreground mt-1">
-          Manage supplier information and contacts
-        </p>
-      </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Schedule Restock Appointment</DialogTitle>
+        </DialogHeader>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Suppliers</p>
-                <h3 className="text-3xl font-bold mt-2">{suppliers.length}</h3>
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-4">
+            {/* Supplier Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="supplier">
+                Supplier <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                id="supplier"
+                value={formData.supplierId}
+                onChange={(e) => handleSupplierChange(e.target.value)}
+                required
+              >
+                <option value="">Select Supplier...</option>
+                {suppliers
+                  .filter(s => s.isActive)
+                  .map(supplier => (
+                    <option key={supplier.id} value={supplier.id}>
+                      {supplier.supplierName} - {supplier.contactPerson}
+                    </option>
+                  ))
+                }
+              </Select>
+              {suppliers.filter(s => s.isActive).length === 0 && (
+                <p className="text-sm text-muted-foreground text-red-600">
+                  ⚠️ No active suppliers available. Please add suppliers first.
+                </p>
+              )}
+            </div>
+
+            {/* Date and Time */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="date">
+                  Date <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="date"
+                  type="date"
+                  min={getTodayDate()}
+                  value={formData.date}
+                  onChange={(e) => handleChange('date', e.target.value)}
+                  required
+                />
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
+              <div className="space-y-2">
+                <Label htmlFor="time">
+                  Time <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="time"
+                  type="time"
+                  value={formData.time}
+                  onChange={(e) => handleChange('time', e.target.value)}
+                  required
+                />
               </div>
             </div>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Active Suppliers</p>
-                <h3 className="text-3xl font-bold text-green-600 mt-2">{activeSuppliers}</h3>
-              </div>
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
+            {/* Status */}
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select
+                id="status"
+                value={formData.status}
+                onChange={(e) => handleChange('status', e.target.value)}
+              >
+                <option value="pending">Pending - Awaiting confirmation</option>
+                <option value="confirmed">Confirmed - Supplier confirmed</option>
+              </Select>
             </div>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Inactive Suppliers</p>
-                <h3 className="text-3xl font-bold text-gray-600 mt-2">{inactiveSuppliers}</h3>
-              </div>
-              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                </svg>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            {/* ✅ FIXED: Item selection with proper state management */}
+            {formData.supplierId && (
+              <div className="space-y-3 p-4 border rounded-lg bg-gray-50">
+                <h4 className="font-semibold">Items to Restock <span className="text-red-500">*</span></h4>
+                
+                {supplierItems.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    ⚠️ No items from this supplier in inventory. Please add items for this supplier first.
+                  </p>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-12 gap-2">
+                      <div className="col-span-7">
+                        <Select 
+                          value={selectedItemId}
+                          onChange={(e) => setSelectedItemId(e.target.value)}
+                        >
+                          <option value="">Select item...</option>
+                          {supplierItems
+                            .filter(item => !selectedItems.some(si => si.itemId === item.id))
+                            .map(item => (
+                              <option key={item.id} value={item.id}>
+                                {item.itemName} (Current: {item.quantity})
+                              </option>
+                            ))
+                          }
+                        </Select>
+                      </div>
+                      <div className="col-span-3">
+                        <Input
+                          type="number"
+                          min="1"
+                          placeholder="Qty"
+                          value={itemQuantity}
+                          onChange={(e) => setItemQuantity(e.target.value)}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="w-full"
+                          onClick={handleAddItem}
+                          disabled={!selectedItemId || !itemQuantity}
+                        >
+                          Add
+                        </Button>
+                      </div>
+                    </div>
 
-      {/* Suppliers List */}
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <CardTitle>Suppliers List</CardTitle>
-            
-            {user.role === 'Admin' && (
-              <Button onClick={() => setIsAddDialogOpen(true)}>
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Add Supplier
-              </Button>
+                    {selectedItems.length > 0 && (
+                      <div className="space-y-2 mt-3">
+                        <p className="text-sm font-medium">Selected Items:</p>
+                        {selectedItems.map((item) => (
+                          <div key={item.itemId} className="flex items-center justify-between p-2 bg-white rounded border">
+                            <span className="text-sm">
+                              {item.itemName} <Badge variant="outline">{item.quantity} units</Badge>
+                            </span>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleRemoveItem(item.itemId)}
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             )}
-          </div>
 
-          {/* Search and Filter */}
-          <div className="flex flex-col md:flex-row gap-4 mt-4">
-            <div className="flex-1">
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes (Optional)</Label>
               <Input
-                type="search"
-                placeholder="Search by name, contact person, or email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                id="notes"
+                placeholder="Add any additional notes..."
+                value={formData.notes}
+                onChange={(e) => handleChange('notes', e.target.value)}
               />
             </div>
 
-            <div className="flex gap-2">
-              <Button 
-                variant={filterStatus === 'all' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setFilterStatus('all')}
-              >
-                All ({suppliers.length})
-              </Button>
-              <Button 
-                variant={filterStatus === 'active' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setFilterStatus('active')}
-              >
-                Active ({activeSuppliers})
-              </Button>
-              <Button 
-                variant={filterStatus === 'inactive' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setFilterStatus('inactive')}
-              >
-                Inactive ({inactiveSuppliers})
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Supplier Name</TableHead>
-                  <TableHead>Contact Person</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Items</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredSuppliers.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      {searchTerm || filterStatus !== 'all'
-                        ? 'No suppliers found matching filters'
-                        : 'No suppliers yet. Add your first supplier to get started.'
-                      }
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredSuppliers.map((supplier) => (
-                    <TableRow key={supplier.id}>
-                      <TableCell className="font-medium">{supplier.supplierName}</TableCell>
-                      <TableCell>{supplier.contactPerson}</TableCell>
-                      <TableCell>
-                        {supplier.contactEmail ? (
-                          <a href={`mailto:${supplier.contactEmail}`} className="text-blue-600 hover:underline">
-                            {supplier.contactEmail}
-                          </a>
-                        ) : (
-                          <span className="text-muted-foreground">No email</span>
-                        )}
-                      </TableCell>
-                      <TableCell>{supplier.contactPhone || 'No phone'}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{getSupplierItemCount(supplier.id)} items</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={supplier.isActive ? 'success' : 'secondary'}>
-                          {supplier.isActive ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setEditingSupplier(supplier)}
-                          >
-                            {user.role === 'Admin' ? 'Edit' : 'View'}
-                          </Button>
-                          
-                          {user.role === 'Admin' && (
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => handleDelete(supplier)}
-                            >
-                              Delete
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+            {/* Summary */}
+            {selectedItems.length > 0 && (
+              <div className="p-3 bg-blue-50 rounded-lg text-sm border border-blue-200">
+                <p className="font-medium mb-1">📋 Appointment Summary:</p>
+                <div className="space-y-1">
+                  <p>Supplier: <strong>{formData.supplierName}</strong></p>
+                  <p>Date: <strong>{formData.date || 'Not selected'} at {formData.time || 'Not selected'}</strong></p>
+                  <p>Items: <strong>{selectedItems.length} item(s)</strong></p>
+                  <p>Total Units: <strong>{selectedItems.reduce((sum, item) => sum + item.quantity, 0)}</strong></p>
+                </div>
+              </div>
+            )}
           </div>
 
-          {filteredSuppliers.length > 0 && (
-            <p className="text-sm text-muted-foreground mt-4">
-              Showing {filteredSuppliers.length} of {suppliers.length} suppliers
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Dialogs */}
-      <AddSupplierDialog
-        open={isAddDialogOpen}
-        onOpenChange={setIsAddDialogOpen}
-        onAdd={handleAddSupplierWithItems}
-        inventoryData={inventoryData}
-        categories={categories}
-      />
-
-      {editingSupplier && (
-        <EditSupplierDialog
-          open={!!editingSupplier}
-          onOpenChange={(open) => !open && setEditingSupplier(null)}
-          supplier={editingSupplier}
-          onEdit={onEditSupplier}
-          isReadOnly={user.role !== 'Admin'}
-        />
-      )}
-
-      {/* ✅ FIXED: Added locations prop */}
-      {pendingNewItems.length > 0 && (
-        <NewItemQuickAddDialog
-          open={isNewItemDialogOpen}
-          onOpenChange={(open) => {
-            if (!open) {
-              // User cancelled - reset everything
-              setIsNewItemDialogOpen(false)
-              setPendingNewItems([])
-              setCurrentNewItemIndex(0)
-              setPendingSupplierData(null)
-              setCreatedItemIds([])
-            }
-          }}
-          itemName={pendingNewItems[currentNewItemIndex]}
-          categories={categories}
-          locations={locations} // ✅ FIXED: locations prop now passed
-          onComplete={handleNewItemComplete}
-        />
-      )}
-    </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button 
+              type="submit"
+              disabled={!formData.supplierId || !formData.date || !formData.time || selectedItems.length === 0}
+            >
+              Schedule Appointment
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
