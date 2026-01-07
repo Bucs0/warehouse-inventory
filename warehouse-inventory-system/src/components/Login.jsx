@@ -708,4 +708,130 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
                     )}
                     {log.action === 'Edited' && (
                       <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002KS
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002KS2 h-2a2 2 0 002 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    )}
+                    {log.action === 'Deleted' && (
+                      <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    )}
+                  </div>
+
+                  <div className="flex-1">
+                    <p className="font-medium">{log.itemName}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {log.action} by {log.userName} • {log.timestamp}
+                    </p>
+                    {log.details && (
+                      <p className="text-sm text-muted-foreground mt-1">{log.details}</p>
+                    )}
+                  </div>
+
+                  <Badge variant={
+                    log.action === 'Added' ? 'success' :
+                    log.action === 'Edited' ? 'default' :
+                    'destructive'
+                  }>
+                    {log.action}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* APPROVAL DIALOG */}
+      <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Staff Approval Requests</DialogTitle>
+            <p className="text-sm text-muted-foreground mt-2">
+              Review and approve or reject staff signup requests
+            </p>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4">
+            {pendingUsers.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <svg className="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="font-medium">No pending approvals</p>
+                <p className="text-sm mt-1">All staff signup requests have been processed</p>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  {pendingUsers.length} pending approval(s)
+                </p>
+                
+                {pendingUsers.map(pendingUser => (
+                  <div key={pendingUser.id} className="border rounded-lg p-4 bg-yellow-50 border-yellow-200">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-lg">{pendingUser.name}</h3>
+                          <Badge variant="warning">Pending</Badge>
+                        </div>
+                        <div className="space-y-1 text-sm">
+                          <p><strong>Username:</strong> {pendingUser.username}</p>
+                          <p><strong>Email:</strong> {pendingUser.email}</p>
+                          <p><strong>Role:</strong> {pendingUser.role}</p>
+                          <p><strong>Signup Date:</strong> {pendingUser.signupDate}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleApproveUser(pendingUser.id)}
+                          className="bg-green-600 hover:bg-green-700"
+                          disabled={isLoading}
+                        >
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleRejectUser(pendingUser.id)}
+                          disabled={isLoading}
+                        >
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                          Reject
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+
+            {/* Approved Users List */}
+            {approvedUsers.length > 0 && (
+              <div className="mt-8 pt-8 border-t">
+                <h3 className="font-semibold mb-4">Approved Staff Members ({approvedUsers.length})</h3>
+                <div className="space-y-2">
+                  {approvedUsers.map(approvedUser => (
+                    <div key={approvedUser.id} className="border rounded p-3 bg-green-50 border-green-200 flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{approvedUser.name}</p>
+                        <p className="text-sm text-muted-foreground">@{approvedUser.username} • {approvedUser.email}</p>
+                      </div>
+                      <Badge variant="success">Approved</Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
