@@ -1,10 +1,11 @@
 // ===================================================================
 // COMPONENT: Login.jsx
-// STATUS: ✅ FULLY UPDATED - All localStorage removed, pure MySQL auth
+// STATUS: ✅ FULLY UPDATED - Pure MySQL authentication
 // CHANGES: 
-// - Removed all localStorage references
+// - Removed ALL localStorage references
 // - Pure database authentication via usersAPI
 // - Cleaner error handling
+// - Better user feedback
 // ===================================================================
 
 import { useState } from 'react'
@@ -41,12 +42,18 @@ export default function Login({ onLogin }) {
 
   const handleLogin = async () => {
     setError('')
+    
+    if (!loginData.usernameOrEmail || !loginData.password) {
+      setError('Please fill in all fields')
+      return
+    }
+
     setIsLoading(true)
 
     try {
       const input = loginData.usernameOrEmail.toLowerCase().trim()
 
-      // Check admin account first
+      // Check admin account first (hardcoded)
       if ((input === ADMIN_ACCOUNT.username || input === ADMIN_ACCOUNT.email.toLowerCase()) 
           && loginData.password === ADMIN_ACCOUNT.password) {
         onLogin(ADMIN_ACCOUNT)
@@ -57,6 +64,7 @@ export default function Login({ onLogin }) {
       const result = await usersAPI.getByCredentials(input, loginData.password)
       
       if (result.success && result.data) {
+        // User found and approved
         onLogin({
           id: result.data.id,
           username: result.data.username,
@@ -66,7 +74,7 @@ export default function Login({ onLogin }) {
           status: result.data.status
         })
       } else {
-        // Check if user is pending
+        // Check if user exists but is pending
         const pendingResult = await usersAPI.getPending()
         if (pendingResult.success) {
           const pendingUser = pendingResult.data.find(u => 
@@ -74,17 +82,17 @@ export default function Login({ onLogin }) {
           )
           
           if (pendingUser) {
-            setError('Your account is pending admin approval. Please wait for approval.')
+            setError('⏳ Your account is pending admin approval. Please wait for approval.')
           } else {
-            setError('Invalid username/email or password')
+            setError('❌ Invalid username/email or password')
           }
         } else {
-          setError('Invalid username/email or password')
+          setError('❌ Invalid username/email or password')
         }
       }
     } catch (error) {
       console.error('Login error:', error)
-      setError('Login failed. Please try again.')
+      setError('🔌 Connection error. Please check your server and try again.')
     } finally {
       setIsLoading(false)
     }
@@ -115,8 +123,8 @@ export default function Login({ onLogin }) {
     }
 
     // Check if username/email is admin
-    if (signupData.username === ADMIN_ACCOUNT.username || 
-        signupData.email === ADMIN_ACCOUNT.email) {
+    if (signupData.username.toLowerCase() === ADMIN_ACCOUNT.username || 
+        signupData.email.toLowerCase() === ADMIN_ACCOUNT.email.toLowerCase()) {
       setError('This username or email is reserved')
       return
     }
@@ -134,26 +142,32 @@ export default function Login({ onLogin }) {
       })
 
       if (result.success) {
+        // Successfully created - show pending approval screen
         setMode('pendingApproval')
         setSignupData({ username: '', email: '', password: '', confirmPassword: '', name: '' })
       } else {
-        setError(result.error || 'Signup failed. Username or email may already exist.')
+        // Database error - likely duplicate username/email
+        if (result.error && result.error.includes('Duplicate')) {
+          setError('Username or email already exists. Please use different credentials.')
+        } else {
+          setError('Signup failed. Please try again.')
+        }
       }
     } catch (error) {
       console.error('Signup error:', error)
-      setError('Signup failed. Please try again.')
+      setError('🔌 Connection error. Please check your server and try again.')
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleKeyPress = (e, action) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !isLoading) {
       action()
     }
   }
 
-  // Pending Approval View
+  // ========== PENDING APPROVAL VIEW ==========
   if (mode === 'pendingApproval') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -189,7 +203,7 @@ export default function Login({ onLogin }) {
     )
   }
 
-  // Signup View
+  // ========== SIGNUP VIEW ==========
   if (mode === 'signup') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -305,7 +319,7 @@ export default function Login({ onLogin }) {
     )
   }
 
-  // Login View
+  // ========== LOGIN VIEW ==========
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <Card className="w-full max-w-md">
@@ -335,6 +349,7 @@ export default function Login({ onLogin }) {
                 onChange={(e) => setLoginData({ ...loginData, usernameOrEmail: e.target.value })}
                 disabled={isLoading}
                 onKeyPress={(e) => handleKeyPress(e, handleLogin)}
+                autoFocus
               />
             </div>
 
@@ -358,7 +373,17 @@ export default function Login({ onLogin }) {
             )}
 
             <Button onClick={handleLogin} className="w-full" disabled={isLoading}>
-              {isLoading ? 'Logging in...' : 'Login'}
+              {isLoading ? (
+                <>
+                  <svg className="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Logging in...
+                </>
+              ) : (
+                'Login'
+              )}
             </Button>
           </div>
 
