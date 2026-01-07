@@ -1,3 +1,8 @@
+// ===================================================================
+// COMPONENT: ScheduleAppointmentDialog.jsx
+// STATUS: ✅ FIXED - Item selection state management bug
+// CHANGES: Fixed handleAddItem to properly use separate state variables
+// ===================================================================
 
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog'
