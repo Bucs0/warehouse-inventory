@@ -868,6 +868,8 @@ export default function App() {
     }
   }
 
+// ========== DAMAGED ITEMS HANDLERS (CONTINUATION) ==========
+
   const handleRemoveDamagedItem = async (damagedItemId) => {
     try {
       const item = damagedItems.find(d => d.id === damagedItemId)
@@ -878,4 +880,281 @@ export default function App() {
         await reloadData(['damaged', 'logs'])
 
         if (item) {
-          await activityLogsAPI
+          await activityLogsAPI.add({
+            itemName: item.itemName,
+            action: 'Deleted',
+            details: 'Damaged item record removed'
+          }, currentUser.id)
+        }
+      }
+    } catch (err) {
+      console.error('Error removing damaged item:', err)
+      alert('Failed to remove damaged item')
+    }
+  }
+
+  // ========== LOG ACTIVITY HANDLER ==========
+
+  const handleLogActivity = async (logData) => {
+    try {
+      await activityLogsAPI.add(logData, currentUser.id)
+      await reloadData(['logs'])
+    } catch (err) {
+      console.error('Error logging activity:', err)
+    }
+  }
+
+  // ========== RENDER ==========
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading data...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <svg className="w-16 h-16 text-red-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-red-600 font-semibold mb-2">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!currentUser) {
+    return <Login onLogin={handleLogin} />
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Navigation Header */}
+      <nav className="bg-white shadow-sm border-b sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex items-center">
+              <div className="flex-shrink-0 flex items-center">
+                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                </div>
+                <span className="ml-2 text-xl font-bold text-gray-900">Warehouse System</span>
+              </div>
+              
+              <div className="hidden md:ml-6 md:flex md:space-x-4">
+                <button
+                  onClick={() => handleNavigate('dashboard')}
+                  className={`px-3 py-2 rounded-md text-sm font-medium ${
+                    currentPage === 'dashboard'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Dashboard
+                </button>
+                
+                {currentUser.role === 'Admin' && (
+                  <button
+                    onClick={() => handleNavigate('inventory')}
+                    className={`px-3 py-2 rounded-md text-sm font-medium ${
+                      currentPage === 'inventory'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    Inventory
+                  </button>
+                )}
+                
+                <button
+                  onClick={() => handleNavigate('transactions')}
+                  className={`px-3 py-2 rounded-md text-sm font-medium ${
+                    currentPage === 'transactions'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Transactions
+                </button>
+                
+                <button
+                  onClick={() => handleNavigate('suppliers')}
+                  className={`px-3 py-2 rounded-md text-sm font-medium ${
+                    currentPage === 'suppliers'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Suppliers
+                </button>
+                
+                <button
+                  onClick={() => handleNavigate('categories')}
+                  className={`px-3 py-2 rounded-md text-sm font-medium ${
+                    currentPage === 'categories'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Categories
+                </button>
+                
+                <button
+                  onClick={() => handleNavigate('appointments')}
+                  className={`px-3 py-2 rounded-md text-sm font-medium ${
+                    currentPage === 'appointments'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Appointments
+                </button>
+                
+                <button
+                  onClick={() => handleNavigate('damaged')}
+                  className={`px-3 py-2 rounded-md text-sm font-medium ${
+                    currentPage === 'damaged'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Damaged Items
+                </button>
+                
+                <button
+                  onClick={() => handleNavigate('logs')}
+                  className={`px-3 py-2 rounded-md text-sm font-medium ${
+                    currentPage === 'logs'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Activity Logs
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-700">
+                {currentUser.name}
+              </span>
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {currentPage === 'dashboard' && (
+          <Dashboard
+            user={currentUser}
+            inventoryData={inventoryData}
+            activityLogs={activityLogs}
+            onNavigate={handleNavigate}
+            onLogActivity={handleLogActivity}
+          />
+        )}
+
+        {currentPage === 'inventory' && (
+          <InventoryTable
+            user={currentUser}
+            inventoryData={inventoryData}
+            suppliers={suppliers}
+            categories={categories}
+            locations={locations}
+            onAddItem={handleAddItem}
+            onEditItem={handleEditItem}
+            onDeleteItem={handleDeleteItem}
+            onAddLocation={handleAddLocation}
+            onEditLocation={handleEditLocation}
+            onDeleteLocation={handleDeleteLocation}
+          />
+        )}
+
+        {currentPage === 'transactions' && (
+          <StockTransactions
+            user={currentUser}
+            inventoryData={inventoryData}
+            transactionHistory={transactionHistory}
+            onTransaction={handleTransaction}
+          />
+        )}
+
+        {currentPage === 'suppliers' && (
+          <SuppliersPage
+            user={currentUser}
+            suppliers={suppliers}
+            inventoryData={inventoryData}
+            categories={categories}
+            locations={locations}
+            onAddSupplier={handleAddSupplier}
+            onEditSupplier={handleEditSupplier}
+            onDeleteSupplier={handleDeleteSupplier}
+            onAddItem={handleAddItem}
+          />
+        )}
+
+        {currentPage === 'categories' && (
+          <CategoriesPage
+            user={currentUser}
+            categories={categories}
+            inventoryData={inventoryData}
+            onAddCategory={handleAddCategory}
+            onEditCategory={handleEditCategory}
+            onDeleteCategory={handleDeleteCategory}
+          />
+        )}
+
+        {currentPage === 'appointments' && (
+          <AppointmentsPage
+            user={currentUser}
+            appointments={appointments}
+            suppliers={suppliers}
+            inventoryData={inventoryData}
+            onScheduleAppointment={handleScheduleAppointment}
+            onEditAppointment={handleEditAppointment}
+            onCancelAppointment={handleCancelAppointment}
+            onCompleteAppointment={handleCompleteAppointment}
+          />
+        )}
+
+        {currentPage === 'damaged' && (
+          <DamagedItemsPage
+            user={currentUser}
+            damagedItems={damagedItems}
+            onUpdateDamagedItem={handleUpdateDamagedItem}
+            onRemoveDamagedItem={handleRemoveDamagedItem}
+          />
+        )}
+
+        {currentPage === 'logs' && (
+          <ActivityLogs
+            activityLogs={activityLogs}
+            currentUser={currentUser}
+          />
+        )}
+      </main>
+    </div>
+  )
+}
