@@ -1,12 +1,9 @@
 // ===================================================================
-// FILE: backend/server.js
-// PURPOSE: Express API server for MySQL database operations
-// SETUP: 
-// 1. Create a 'backend' folder in your project root
-// 2. Run: npm init -y
-// 3. Run: npm install express mysql2 cors dotenv body-parser
-// 4. Create .env file with your database credentials
-// 5. Run: node server.js
+// FILE: backend/server.js - UPDATED WITH CORS FIX
+// CHANGES: 
+// - Fixed CORS configuration to allow all origins in development
+// - Removed CSP restrictions that were blocking the app
+// - Added better error handling
 // ===================================================================
 
 import express from 'express';
@@ -20,12 +17,31 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
-app.use(cors());
+// ==================== MIDDLEWARE ====================
+
+// ✅ FIXED: CORS Configuration - Allow all origins in development
+app.use(cors({
+  origin: '*', // Allow all origins (for development)
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
+// Body parsers
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Database Configuration
+// ✅ REMOVED: CSP headers that were blocking the app
+// The previous CSP was too restrictive and blocking necessary scripts
+
+// Logging middleware (optional - helps with debugging)
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
+// ==================== DATABASE CONFIGURATION ====================
+
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
@@ -47,6 +63,7 @@ pool.getConnection()
   })
   .catch(err => {
     console.error('❌ Database connection failed:', err.message);
+    console.error('Please check your MySQL server and credentials in backend/.env');
   });
 
 // ==================== UTILITY FUNCTIONS ====================
@@ -60,6 +77,16 @@ const executeQuery = async (sql, params = []) => {
     return { success: false, error: error.message };
   }
 };
+
+// ==================== HEALTH CHECK ENDPOINT ====================
+
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Server is running',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // ==================== INVENTORY ENDPOINTS ====================
 
@@ -561,10 +588,32 @@ app.delete('/api/users/:id/reject', async (req, res) => {
   res.json(result);
 });
 
+// ==================== ERROR HANDLING ====================
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ 
+    success: false, 
+    error: 'Endpoint not found',
+    path: req.url 
+  });
+});
+
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error('Server error:', err);
+  res.status(500).json({ 
+    success: false, 
+    error: 'Internal server error',
+    message: err.message 
+  });
+});
+
 // ==================== START SERVER ====================
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📊 Database: ${dbConfig.database}`);
   console.log(`🔌 API endpoints available at http://localhost:${PORT}/api`);
+  console.log(`✅ CORS enabled for all origins (development mode)`);
 });

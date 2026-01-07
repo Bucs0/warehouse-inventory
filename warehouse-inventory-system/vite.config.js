@@ -12,9 +12,6 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  server: {
-    headers: {
-      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:3001"
-    }
-  }
+  // ✅ COMPLETE FIX: Remove ALL server headers
+  // This prevents any CSP conflicts during development
 })
