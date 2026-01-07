@@ -95,6 +95,42 @@ export default function App() {
       }
     ]
   })
+
+  const [locations, setLocations] = useState(() => {
+  const saved = localStorage.getItem('locations')
+  return saved ? JSON.parse(saved) : [
+    {
+      id: 1,
+      locationName: 'Warehouse A, Shelf 1',
+      description: 'Main storage area, first floor',
+      dateAdded: '11/01/2025'
+    },
+    {
+      id: 2,
+      locationName: 'Warehouse B, Section 2',
+      description: 'Equipment storage, second floor',
+      dateAdded: '11/01/2025'
+    },
+    {
+      id: 3,
+      locationName: 'Warehouse C, Area 1',
+      description: 'Furniture storage',
+      dateAdded: '11/01/2025'
+    },
+    {
+      id: 4,
+      locationName: 'Warehouse A, Shelf 3',
+      description: 'Office supplies section',
+      dateAdded: '11/01/2025'
+    },
+    {
+      id: 5,
+      locationName: 'Warehouse B, Section 4',
+      description: 'Electronics storage',
+      dateAdded: '11/01/2025'
+    }
+  ]
+})
   
   const [inventoryData, setInventoryData] = useState(() => {
     const saved = localStorage.getItem('inventoryData')
@@ -284,6 +320,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('lowStockAlertsSent', JSON.stringify(lowStockAlertsSent))
   }, [lowStockAlertsSent])
+
+  useEffect(() => {
+  localStorage.setItem('locations', JSON.stringify(locations))
+}, [locations])
 
   // Use a locking mechanism to prevent duplicate alerts from multiple tabs
   useEffect(() => {
@@ -599,6 +639,91 @@ export default function App() {
       }
     }
   }
+
+  const handleAddLocation = (newLocation) => {
+  setLocations(prev => [...prev, newLocation])
+
+  const newLog = {
+    id: Date.now(),
+    itemName: `Location: ${newLocation.locationName}`,
+    action: 'Added',
+    userName: currentUser.name,
+    userRole: currentUser.role,
+    timestamp: new Date().toLocaleString('en-PH', {
+      month: '2-digit',
+      day: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    }),
+    details: 'New location added to warehouse'
+  }
+  setActivityLogs(prev => [...prev, newLog])
+}
+
+const handleEditLocation = (updatedLocation) => {
+  const oldLocation = locations.find(loc => loc.id === updatedLocation.id)
+  
+  setLocations(prev => 
+    prev.map(location => location.id === updatedLocation.id ? updatedLocation : location)
+  )
+
+  // Update items that use this location
+  if (oldLocation && oldLocation.locationName !== updatedLocation.locationName) {
+    setInventoryData(prev =>
+      prev.map(item =>
+        item.location === oldLocation.locationName
+          ? { ...item, location: updatedLocation.locationName }
+          : item
+      )
+    )
+  }
+
+  const newLog = {
+    id: Date.now(),
+    itemName: `Location: ${updatedLocation.locationName}`,
+    action: 'Edited',
+    userName: currentUser.name,
+    userRole: currentUser.role,
+    timestamp: new Date().toLocaleString('en-PH', {
+      month: '2-digit',
+      day: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    }),
+    details: 'Location information updated'
+  }
+  setActivityLogs(prev => [...prev, newLog])
+}
+
+const handleDeleteLocation = (locationId) => {
+  const location = locations.find(l => l.id === locationId)
+  
+  setLocations(prev => prev.filter(l => l.id !== locationId))
+
+  if (location) {
+    const newLog = {
+      id: Date.now(),
+      itemName: `Location: ${location.locationName}`,
+      action: 'Deleted',
+      userName: currentUser.name,
+      userRole: currentUser.role,
+      timestamp: new Date().toLocaleString('en-PH', {
+        month: '2-digit',
+        day: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      }),
+      details: 'Location removed from warehouse'
+    }
+    setActivityLogs(prev => [...prev, newLog])
+  }
+}
 
   const handleAddSupplier = (newSupplier) => {
     setSuppliers(prev => [...prev, newSupplier])
@@ -977,6 +1102,8 @@ export default function App() {
     }
   }
 
+  
+
   //  RENDER 
 
   if (!currentUser) {
@@ -1150,9 +1277,13 @@ export default function App() {
             inventoryData={inventoryData}
             suppliers={suppliers}
             categories={categories}
+            locations={locations}  // ADD THIS
             onAddItem={handleAddItem}
             onEditItem={handleEditItem}
             onDeleteItem={handleDeleteItem}
+            onAddLocation={handleAddLocation}  // ADD THIS
+            onEditLocation={handleEditLocation}  // ADD THIS
+            onDeleteLocation={handleDeleteLocation}  // ADD THIS
           />
         )}
 

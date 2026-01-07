@@ -1,5 +1,4 @@
 
-
 import { useState } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from './ui/table'
@@ -8,20 +7,26 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import AddItemDialog from './AddItemDialog'
 import EditItemDialog from './EditItemDialog'
+import LocationManagementDialog from './LocationManagementDialog'  
 
 export default function InventoryTable({ 
   user, 
   inventoryData, 
   suppliers,
   categories,
+  locations, 
   onAddItem, 
   onEditItem, 
-  onDeleteItem 
+  onDeleteItem,
+  onAddLocation, 
+  onEditLocation,  
+  onDeleteLocation  
 }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [editingItem, setEditingItem] = useState(null)
   const [filterStatus, setFilterStatus] = useState('all')
+  const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false) 
 
   const filteredItems = inventoryData.filter(item => {
     const matchesSearch = item.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -52,12 +57,24 @@ export default function InventoryTable({
             <CardTitle>Inventory Management</CardTitle>
             
             {user.role === 'Admin' && (
-              <Button onClick={() => setIsAddDialogOpen(true)}>
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Add Item
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={() => setIsLocationDialogOpen(true)}
+                  variant="outline"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Manage Locations
+                </Button>
+                <Button onClick={() => setIsAddDialogOpen(true)}>
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Add Item
+                </Button>
+              </div>
             )}
           </div>
 
@@ -86,7 +103,6 @@ export default function InventoryTable({
               >
                 Low Stock ({inventoryData.filter(i => i.quantity <= i.reorderLevel).length})
               </Button>
-              
             </div>
           </div>
         </CardHeader>
@@ -189,6 +205,7 @@ export default function InventoryTable({
         onAdd={onAddItem}
         suppliers={suppliers}
         categories={categories}
+        locations={locations}
       />
 
       {editingItem && (
@@ -199,8 +216,19 @@ export default function InventoryTable({
           onEdit={onEditItem}
           suppliers={suppliers}
           categories={categories}
+          locations={locations}
         />
       )}
+
+      <LocationManagementDialog
+        open={isLocationDialogOpen}
+        onOpenChange={setIsLocationDialogOpen}
+        locations={locations}
+        inventoryData={inventoryData}
+        onAddLocation={onAddLocation}
+        onEditLocation={onEditLocation}
+        onDeleteLocation={onDeleteLocation}
+      />
     </div>
   )
 }

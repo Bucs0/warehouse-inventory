@@ -1,6 +1,4 @@
 
-// Dialog for adding new item with supplier dropdown
-
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog'
 import { Input } from './ui/input'
@@ -13,7 +11,8 @@ export default function AddItemDialog({
   onOpenChange, 
   onAdd, 
   suppliers = [],
-  categories = []
+  categories = [],
+  locations = [] 
 }) {
   const [formData, setFormData] = useState({
     itemName: '',
@@ -65,7 +64,6 @@ export default function AddItemDialog({
 
     onAdd(newItem)
 
-    // Reset form
     setFormData({
       itemName: '',
       category: 'Office Supplies',
@@ -87,7 +85,6 @@ export default function AddItemDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Item Name */}
           <div className="space-y-2">
             <Label htmlFor="itemName">
               Item Name <span className="text-red-500">*</span>
@@ -101,7 +98,6 @@ export default function AddItemDialog({
             />
           </div>
 
-          {/* Category */}
           <div className="space-y-2">
             <Label htmlFor="category">Category</Label>
             <Select
@@ -127,7 +123,6 @@ export default function AddItemDialog({
             </Select>
           </div>
 
-          {/* Supplier Dropdown */}
           <div className="space-y-2">
             <Label htmlFor="supplier">Supplier</Label>
             <Select
@@ -147,7 +142,6 @@ export default function AddItemDialog({
             </Select>
           </div>
 
-          {/* Quantity and Reorder Level */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="quantity">
@@ -176,21 +170,32 @@ export default function AddItemDialog({
             </div>
           </div>
 
-          {/* Location */}
           <div className="space-y-2">
             <Label htmlFor="location">
               Location <span className="text-red-500">*</span>
             </Label>
-            <Input
-              id="location"
-              placeholder="e.g., Warehouse A, Shelf 3"
-              value={formData.location}
-              onChange={(e) => handleChange('location', e.target.value)}
-              required
-            />
+            {locations && locations.length > 0 ? (
+              <Select
+                id="location"
+                value={formData.location}
+                onChange={(e) => handleChange('location', e.target.value)}
+                required
+              >
+                <option value="">Select Location...</option>
+                {locations.map(location => (
+                  <option key={location.id} value={location.locationName}>
+                    {location.locationName}
+                    {location.description && ` - ${location.description}`}
+                  </option>
+                ))}
+              </Select>
+            ) : (
+              <div className="text-sm text-muted-foreground border rounded-lg p-3 bg-yellow-50">
+                No locations available. Please add locations first in Manage Locations.
+              </div>
+            )}
           </div>
 
-          {/* Price */}
           <div className="space-y-2">
             <Label htmlFor="price">Price (₱)</Label>
             <Input

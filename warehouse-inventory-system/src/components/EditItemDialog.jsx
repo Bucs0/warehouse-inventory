@@ -1,7 +1,4 @@
 
-// Dialog para sa pag-edit ng existing item
-// Now with supplier dropdown!
-
 import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog'
 import { Input } from './ui/input'
@@ -11,7 +8,15 @@ import { Button } from './ui/button'
 
 const CATEGORIES = ['Office Supplies', 'Equipment', 'Furniture', 'Electronics', 'Other']
 
-export default function EditItemDialog({ open, onOpenChange, item, onEdit, suppliers, categories }) {
+export default function EditItemDialog({ 
+  open, 
+  onOpenChange, 
+  item, 
+  onEdit, 
+  suppliers, 
+  categories,
+  locations = []  
+}) {
   const [formData, setFormData] = useState({
     itemName: '',
     category: 'Office Supplies',
@@ -42,7 +47,6 @@ export default function EditItemDialog({ open, onOpenChange, item, onEdit, suppl
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
-  // Handle supplier selection
   const handleSupplierChange = (supplierId) => {
     const selectedSupplier = suppliers.find(s => s.id === parseInt(supplierId))
     if (selectedSupplier) {
@@ -83,7 +87,6 @@ export default function EditItemDialog({ open, onOpenChange, item, onEdit, suppl
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
-            {/* Item Name */}
             <div className="space-y-2">
               <Label htmlFor="edit-itemName">
                 Item Name <span className="text-red-500">*</span>
@@ -97,7 +100,6 @@ export default function EditItemDialog({ open, onOpenChange, item, onEdit, suppl
               />
             </div>
 
-            {/* Category */}
             <div className="space-y-2">
               <Label htmlFor="edit-category">Category</Label>
               <Select
@@ -117,7 +119,6 @@ export default function EditItemDialog({ open, onOpenChange, item, onEdit, suppl
               </Select>
             </div>
 
-            {/* Supplier Dropdown */}
             <div className="space-y-2">
               <Label htmlFor="edit-supplier">Supplier</Label>
               <Select
@@ -137,7 +138,6 @@ export default function EditItemDialog({ open, onOpenChange, item, onEdit, suppl
               </Select>
             </div>
 
-            {/* Quantity and Reorder Level */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-quantity">
@@ -166,21 +166,32 @@ export default function EditItemDialog({ open, onOpenChange, item, onEdit, suppl
               </div>
             </div>
 
-            {/* Location */}
             <div className="space-y-2">
               <Label htmlFor="edit-location">
                 Location <span className="text-red-500">*</span>
               </Label>
-              <Input
-                id="edit-location"
-                placeholder="e.g., Warehouse A, Shelf 3"
-                value={formData.location}
-                onChange={(e) => handleChange('location', e.target.value)}
-                required
-              />
+              {locations && locations.length > 0 ? (
+                <Select
+                  id="edit-location"
+                  value={formData.location}
+                  onChange={(e) => handleChange('location', e.target.value)}
+                  required
+                >
+                  <option value="">Select Location...</option>
+                  {locations.map(location => (
+                    <option key={location.id} value={location.locationName}>
+                      {location.locationName}
+                      {location.description && ` - ${location.description}`}
+                    </option>
+                  ))}
+                </Select>
+              ) : (
+                <div className="text-sm text-muted-foreground border rounded-lg p-3 bg-yellow-50">
+                  No locations available. Current: {formData.location}
+                </div>
+              )}
             </div>
 
-            {/* Price */}
             <div className="space-y-2">
               <Label htmlFor="edit-price">Price (₱)</Label>
               <Input
