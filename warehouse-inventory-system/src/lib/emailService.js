@@ -1,8 +1,9 @@
+
 // Email Service for Warehouse Inventory System
 const EMAILJS_SERVICE_ID = 'service_an2ngeg'
 const EMAILJS_TEMPLATE_ID_LOW_STOCK = 'template_l3vz6al'
 const EMAILJS_TEMPLATE_ID_APPOINTMENT = 'template_x3a2ecb'
-const EMAILJS_TEMPLATE_ID_CANCEL = 'template_f78lto8' // ✅ NEW: Add this template ID
+const EMAILJS_TEMPLATE_ID_CANCEL = 'template_f78lto8'
 const EMAILJS_PUBLIC_KEY = 'Lk9FwnFHIYBdz8d-d'
 
 // Load EmailJS library
@@ -24,9 +25,6 @@ const loadEmailJS = () => {
   })
 }
 
-/**
- * Send low stock alert email to admin
- */
 export const sendLowStockAlert = async (item, adminEmail) => {
   try {
     const emailjs = await loadEmailJS()
@@ -66,14 +64,19 @@ export const sendLowStockAlert = async (item, adminEmail) => {
   }
 }
 
-/**
- * Send appointment confirmation email to supplier
- */
+
 export const sendAppointmentEmail = async (appointment, supplier) => {
   try {
+    if (!supplier.contactEmail || supplier.contactEmail.trim() === '') {
+      console.error('❌ Supplier has no email address:', supplier.supplierName)
+      return { 
+        success: false, 
+        error: `Supplier "${supplier.supplierName}" has no email address configured` 
+      }
+    }
+
     const emailjs = await loadEmailJS()
 
-    // Format items list for email
     const itemsList = appointment.items
       .map(item => `• ${item.itemName} - ${item.quantity} units`)
       .join('\n')
@@ -88,7 +91,7 @@ export const sendAppointmentEmail = async (appointment, supplier) => {
 
     const templateParams = {
       to_name: supplier.contactPerson,
-      to_email: supplier.contactEmail,
+      to_email: supplier.contactEmail, 
       supplier_name: supplier.supplierName,
       appointment_date: formattedDate,
       appointment_time: appointment.time,
@@ -100,7 +103,9 @@ export const sendAppointmentEmail = async (appointment, supplier) => {
       contact_phone: supplier.contactPhone || 'Not provided'
     }
 
-    console.log('📧 Sending appointment email with params:', templateParams)
+    console.log('📧 Sending appointment email to:', supplier.contactEmail)
+    console.log('📋 Template parameters:', templateParams)
+    console.log('📬 Using template ID:', EMAILJS_TEMPLATE_ID_APPOINTMENT)
 
     const response = await emailjs.send(
       EMAILJS_SERVICE_ID,
@@ -108,22 +113,32 @@ export const sendAppointmentEmail = async (appointment, supplier) => {
       templateParams
     )
 
-    console.log('✅ Appointment confirmation email sent:', response)
+    console.log('✅ Appointment confirmation email sent successfully!')
+    console.log('📨 Response:', response)
+    
     return { success: true, response }
   } catch (error) {
     console.error('❌ Failed to send appointment email:', error)
-    return { success: false, error: error.message }
+    console.error('❌ Error details:', error.text || error.message)
+    return { 
+      success: false, 
+      error: error.text || error.message || 'Unknown error occurred'
+    }
   }
 }
 
-/**
- * ✅ NEW: Send appointment cancellation email to supplier
- */
 export const sendAppointmentCancelEmail = async (appointment, supplier, cancelReason = '') => {
   try {
+    if (!supplier.contactEmail || supplier.contactEmail.trim() === '') {
+      console.error('❌ Supplier has no email address:', supplier.supplierName)
+      return { 
+        success: false, 
+        error: `Supplier "${supplier.supplierName}" has no email address configured` 
+      }
+    }
+
     const emailjs = await loadEmailJS()
 
-    // Format items list for email
     const itemsList = appointment.items
       .map(item => `• ${item.itemName} - ${item.quantity} units`)
       .join('\n')
@@ -138,7 +153,7 @@ export const sendAppointmentCancelEmail = async (appointment, supplier, cancelRe
 
     const templateParams = {
       to_name: supplier.contactPerson,
-      to_email: supplier.contactEmail,
+      to_email: supplier.contactEmail, 
       supplier_name: supplier.supplierName,
       appointment_date: formattedDate,
       appointment_time: appointment.time,
@@ -157,7 +172,9 @@ export const sendAppointmentCancelEmail = async (appointment, supplier, cancelRe
       contact_phone: supplier.contactPhone || 'Not provided'
     }
 
-    console.log('📧 Sending cancellation email with params:', templateParams)
+    console.log('📧 Sending cancellation email to:', supplier.contactEmail)
+    console.log('📋 Template parameters:', templateParams)
+    console.log('📬 Using template ID:', EMAILJS_TEMPLATE_ID_CANCEL)
 
     const response = await emailjs.send(
       EMAILJS_SERVICE_ID,
@@ -165,17 +182,20 @@ export const sendAppointmentCancelEmail = async (appointment, supplier, cancelRe
       templateParams
     )
 
-    console.log('✅ Cancellation email sent:', response)
+    console.log('✅ Cancellation email sent successfully!')
+    console.log('📨 Response:', response)
+    
     return { success: true, response }
   } catch (error) {
     console.error('❌ Failed to send cancellation email:', error)
-    return { success: false, error: error.message }
+    console.error('❌ Error details:', error.text || error.message)
+    return { 
+      success: false, 
+      error: error.text || error.message || 'Unknown error occurred'
+    }
   }
 }
 
-/**
- * Check if EmailJS is properly configured
- */
 export const isEmailConfigured = () => {
   return EMAILJS_SERVICE_ID !== 'YOUR_SERVICE_ID' &&
          EMAILJS_TEMPLATE_ID_LOW_STOCK !== 'YOUR_LOW_STOCK_TEMPLATE_ID' &&
@@ -183,9 +203,6 @@ export const isEmailConfigured = () => {
          EMAILJS_PUBLIC_KEY !== 'YOUR_PUBLIC_KEY'
 }
 
-/**
- * Send test email
- */
 export const sendTestEmail = async (testEmail) => {
   try {
     const emailjs = await loadEmailJS()
