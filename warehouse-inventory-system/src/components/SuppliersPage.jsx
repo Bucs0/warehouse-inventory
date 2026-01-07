@@ -1,3 +1,4 @@
+// ✅ UPDATED: Added locations prop to function signature and passed it to NewItemQuickAddDialog
 
 import { useState } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card'
@@ -14,6 +15,7 @@ export default function SuppliersPage({
   suppliers, 
   inventoryData, 
   categories,
+  locations = [], // ✅ ADDED: locations prop
   onAddSupplier, 
   onEditSupplier, 
   onDeleteSupplier,
@@ -342,6 +344,7 @@ export default function SuppliersPage({
         />
       )}
 
+      {/* ✅ UPDATED: Added locations prop to NewItemQuickAddDialog */}
       {pendingNewItems.length > 0 && (
         <NewItemQuickAddDialog
           open={isNewItemDialogOpen}
@@ -356,6 +359,7 @@ export default function SuppliersPage({
           }}
           itemName={pendingNewItems[currentNewItemIndex]}
           categories={categories}
+          locations={locations} // ✅ ADDED: Pass locations to dialog
           onComplete={handleNewItemComplete}
         />
       )}

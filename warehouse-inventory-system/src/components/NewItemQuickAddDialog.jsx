@@ -1,5 +1,5 @@
-
 // Quick dialog for adding item info when creating supplier with new items
+// ✅ UPDATED: Removed quantity field - automatically set to 0 when adding new items
 
 import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog'
@@ -14,11 +14,12 @@ export default function NewItemQuickAddDialog({
   onOpenChange, 
   itemName, 
   categories,
+  locations = [],
   onComplete 
 }) {
   const [formData, setFormData] = useState({
     category: 'Office Supplies',
-    quantity: '',
+    // ✅ REMOVED: quantity field - will be set to 0 automatically
     location: '',
     reorderLevel: '10',
     price: ''
@@ -29,7 +30,6 @@ export default function NewItemQuickAddDialog({
     if (itemName) {
       setFormData({
         category: 'Office Supplies',
-        quantity: '',
         location: '',
         reorderLevel: '10',
         price: ''
@@ -42,14 +42,15 @@ export default function NewItemQuickAddDialog({
   }
 
   const handleSubmit = () => {
-    if (!formData.quantity || !formData.location) {
-      alert('Please fill in quantity and location')
+    // ✅ UPDATED: Only check for location now
+    if (!formData.location) {
+      alert('Please select a location')
       return
     }
 
     const itemData = {
       ...formData,
-      quantity: parseInt(formData.quantity) || 0,
+      quantity: 0, // ✅ ADDED: Automatically set quantity to 0
       reorderLevel: parseInt(formData.reorderLevel) || 10,
       price: parseFloat(formData.price) || 0
     }
@@ -94,33 +95,20 @@ export default function NewItemQuickAddDialog({
             </Select>
           </div>
 
-          {/* Quantity and Reorder Level */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="quick-quantity">
-                Quantity <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="quick-quantity"
-                type="number"
-                min="0"
-                placeholder="e.g., 100"
-                value={formData.quantity}
-                onChange={(e) => handleChange('quantity', e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="quick-reorderLevel">Reorder Level</Label>
-              <Input
-                id="quick-reorderLevel"
-                type="number"
-                min="0"
-                placeholder="e.g., 10"
-                value={formData.reorderLevel}
-                onChange={(e) => handleChange('reorderLevel', e.target.value)}
-              />
-            </div>
+          {/* ✅ REMOVED: Quantity and Reorder Level grid - Only showing Reorder Level now */}
+          <div className="space-y-2">
+            <Label htmlFor="quick-reorderLevel">Reorder Level</Label>
+            <Input
+              id="quick-reorderLevel"
+              type="number"
+              min="0"
+              placeholder="e.g., 10"
+              value={formData.reorderLevel}
+              onChange={(e) => handleChange('reorderLevel', e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Initial quantity will be set to 0. Use Stock Transactions to add inventory.
+            </p>
           </div>
 
           {/* Location */}
@@ -128,13 +116,26 @@ export default function NewItemQuickAddDialog({
             <Label htmlFor="quick-location">
               Location <span className="text-red-500">*</span>
             </Label>
-            <Input
-              id="quick-location"
-              placeholder="e.g., Warehouse A, Shelf 3"
-              value={formData.location}
-              onChange={(e) => handleChange('location', e.target.value)}
-              required
-            />
+            {locations && locations.length > 0 ? (
+              <Select
+                id="quick-location"
+                value={formData.location}
+                onChange={(e) => handleChange('location', e.target.value)}
+                required
+              >
+                <option value="">Select Location...</option>
+                {locations.map(location => (
+                  <option key={location.id} value={location.locationName}>
+                    {location.locationName}
+                    {location.description && ` - ${location.description}`}
+                  </option>
+                ))}
+              </Select>
+            ) : (
+              <div className="text-sm text-muted-foreground border rounded-lg p-3 bg-yellow-50">
+                ⚠️ No locations available. Please add locations first in Manage Locations.
+              </div>
+            )}
           </div>
 
           {/* Price */}
@@ -150,6 +151,19 @@ export default function NewItemQuickAddDialog({
               onChange={(e) => handleChange('price', e.target.value)}
             />
           </div>
+
+          {/* ✅ ADDED: Info message about quantity */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="flex gap-2">
+              <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="text-sm text-blue-800">
+                <p className="font-medium">Initial Quantity</p>
+                <p className="mt-1">This item will be created with 0 quantity. Add stock later using the Stock Transactions feature.</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <DialogFooter>
@@ -160,7 +174,12 @@ export default function NewItemQuickAddDialog({
           >
             Cancel
           </Button>
-          <Button onClick={handleSubmit}>Add Item</Button>
+          <Button 
+            onClick={handleSubmit}
+            disabled={!formData.location}
+          >
+            Add Item
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

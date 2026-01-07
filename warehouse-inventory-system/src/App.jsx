@@ -1277,13 +1277,13 @@ const handleDeleteLocation = (locationId) => {
             inventoryData={inventoryData}
             suppliers={suppliers}
             categories={categories}
-            locations={locations}  // ADD THIS
+            locations={locations}  
             onAddItem={handleAddItem}
             onEditItem={handleEditItem}
             onDeleteItem={handleDeleteItem}
-            onAddLocation={handleAddLocation}  // ADD THIS
-            onEditLocation={handleEditLocation}  // ADD THIS
-            onDeleteLocation={handleDeleteLocation}  // ADD THIS
+            onAddLocation={handleAddLocation}  
+            onEditLocation={handleEditLocation}  
+            onDeleteLocation={handleDeleteLocation}  
           />
         )}
 
@@ -1294,6 +1294,7 @@ const handleDeleteLocation = (locationId) => {
             suppliers={suppliers}
             inventoryData={inventoryData}
             categories={categories}
+            locations={locations}  
             onAddSupplier={handleAddSupplier}
             onEditSupplier={handleEditSupplier}
             onDeleteSupplier={handleDeleteSupplier}
