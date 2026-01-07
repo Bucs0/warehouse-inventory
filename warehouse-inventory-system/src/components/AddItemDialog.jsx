@@ -1,3 +1,10 @@
+// ===================================================================
+// COMPONENT: AddItemDialog.jsx
+// STATUS: ✅ UPDATED for MySQL database
+// CHANGES: 
+// - Updated to work with category/location IDs from database
+// - Simplified data structure for API compatibility
+// ===================================================================
 
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog'
@@ -16,63 +23,54 @@ export default function AddItemDialog({
 }) {
   const [formData, setFormData] = useState({
     itemName: '',
-    category: 'Office Supplies',
+    categoryId: '',
     quantity: '',
-    location: '',
+    locationId: '',
     reorderLevel: '10',
     price: '',
-    supplierId: '',
-    supplier: ''
+    supplierId: ''
   })
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
-  const handleSupplierChange = (supplierId) => {
-    const selectedSupplier = suppliers.find(s => s.id === parseInt(supplierId))
-    if (selectedSupplier) {
-      setFormData(prev => ({
-        ...prev,
-        supplierId: selectedSupplier.id,
-        supplier: selectedSupplier.supplierName
-      }))
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        supplierId: '',
-        supplier: ''
-      }))
-    }
-  }
-
   const handleSubmit = () => {
-    if (!formData.itemName || !formData.quantity || !formData.location) {
-      alert('Please fill in all required fields (Item Name, Quantity, Location)')
+    if (!formData.itemName || !formData.quantity || !formData.locationId || !formData.categoryId) {
+      alert('Please fill in all required fields (Item Name, Category, Quantity, Location)')
       return
     }
 
+    // Get the actual names for display
+    const category = categories.find(c => c.id === parseInt(formData.categoryId))
+    const location = locations.find(l => l.id === parseInt(formData.locationId))
+    const supplier = suppliers.find(s => s.id === parseInt(formData.supplierId))
+
     const newItem = {
-      id: Date.now(),
-      ...formData,
+      itemName: formData.itemName,
+      categoryId: parseInt(formData.categoryId),
       quantity: parseInt(formData.quantity) || 0,
+      locationId: parseInt(formData.locationId),
       reorderLevel: parseInt(formData.reorderLevel) || 10,
       price: parseFloat(formData.price) || 0,
-      damagedStatus: 'Good',
-      dateAdded: new Date().toLocaleDateString('en-PH')
+      supplierId: formData.supplierId ? parseInt(formData.supplierId) : null,
+      // Include display names for immediate UI update (will be overwritten by server response)
+      category: category?.categoryName || 'Other',
+      location: location?.locationName || 'Unknown',
+      supplier: supplier?.supplierName || null
     }
 
     onAdd(newItem)
 
+    // Reset form
     setFormData({
       itemName: '',
-      category: 'Office Supplies',
+      categoryId: '',
       quantity: '',
-      location: '',
+      locationId: '',
       reorderLevel: '10',
       price: '',
-      supplierId: '',
-      supplier: ''
+      supplierId: ''
     })
     onOpenChange(false)
   }
@@ -99,26 +97,24 @@ export default function AddItemDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="category">Category</Label>
+            <Label htmlFor="category">
+              Category <span className="text-red-500">*</span>
+            </Label>
             <Select
               id="category"
-              value={formData.category}
-              onChange={(e) => handleChange('category', e.target.value)}
+              value={formData.categoryId}
+              onChange={(e) => handleChange('categoryId', e.target.value)}
+              required
             >
+              <option value="">Select Category...</option>
               {categories && categories.length > 0 ? (
                 categories.map(cat => (
-                  <option key={cat.id} value={cat.categoryName}>
+                  <option key={cat.id} value={cat.id}>
                     {cat.categoryName}
                   </option>
                 ))
               ) : (
-                <>
-                  <option value="Office Supplies">Office Supplies</option>
-                  <option value="Equipment">Equipment</option>
-                  <option value="Furniture">Furniture</option>
-                  <option value="Electronics">Electronics</option>
-                  <option value="Other">Other</option>
-                </>
+                <option disabled>No categories available</option>
               )}
             </Select>
           </div>
@@ -128,7 +124,7 @@ export default function AddItemDialog({
             <Select
               id="supplier"
               value={formData.supplierId}
-              onChange={(e) => handleSupplierChange(e.target.value)}
+              onChange={(e) => handleChange('supplierId', e.target.value)}
             >
               <option value="">Select Supplier (Optional)...</option>
               {suppliers
@@ -177,13 +173,13 @@ export default function AddItemDialog({
             {locations && locations.length > 0 ? (
               <Select
                 id="location"
-                value={formData.location}
-                onChange={(e) => handleChange('location', e.target.value)}
+                value={formData.locationId}
+                onChange={(e) => handleChange('locationId', e.target.value)}
                 required
               >
                 <option value="">Select Location...</option>
                 {locations.map(location => (
-                  <option key={location.id} value={location.locationName}>
+                  <option key={location.id} value={location.id}>
                     {location.locationName}
                     {location.description && ` - ${location.description}`}
                   </option>

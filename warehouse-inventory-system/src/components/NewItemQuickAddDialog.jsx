@@ -1,5 +1,10 @@
-// Quick dialog for adding item info when creating supplier with new items
-// ✅ UPDATED: Removed quantity field - automatically set to 0 when adding new items
+// ===================================================================
+// COMPONENT: NewItemQuickAddDialog.jsx
+// STATUS: ✅ UPDATED for MySQL database
+// CHANGES: 
+// - Updated to use category/location IDs
+// - Removed quantity field (set to 0 automatically)
+// ===================================================================
 
 import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog'
@@ -18,9 +23,8 @@ export default function NewItemQuickAddDialog({
   onComplete 
 }) {
   const [formData, setFormData] = useState({
-    category: 'Office Supplies',
-    // ✅ REMOVED: quantity field - will be set to 0 automatically
-    location: '',
+    categoryId: '',
+    locationId: '',
     reorderLevel: '10',
     price: ''
   })
@@ -29,28 +33,28 @@ export default function NewItemQuickAddDialog({
   useEffect(() => {
     if (itemName) {
       setFormData({
-        category: 'Office Supplies',
-        location: '',
+        categoryId: categories.length > 0 ? categories[0].id.toString() : '',
+        locationId: '',
         reorderLevel: '10',
         price: ''
       })
     }
-  }, [itemName])
+  }, [itemName, categories])
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
   const handleSubmit = () => {
-    // ✅ UPDATED: Only check for location now
-    if (!formData.location) {
-      alert('Please select a location')
+    if (!formData.locationId || !formData.categoryId) {
+      alert('Please select a category and location')
       return
     }
 
     const itemData = {
-      ...formData,
-      quantity: 0, // ✅ ADDED: Automatically set quantity to 0
+      categoryId: parseInt(formData.categoryId),
+      locationId: parseInt(formData.locationId),
+      quantity: 0, // Always 0 for new items
       reorderLevel: parseInt(formData.reorderLevel) || 10,
       price: parseFloat(formData.price) || 0
     }
@@ -71,31 +75,29 @@ export default function NewItemQuickAddDialog({
         <div className="space-y-4">
           {/* Category */}
           <div className="space-y-2">
-            <Label htmlFor="quick-category">Category</Label>
+            <Label htmlFor="quick-category">
+              Category <span className="text-red-500">*</span>
+            </Label>
             <Select
               id="quick-category"
-              value={formData.category}
-              onChange={(e) => handleChange('category', e.target.value)}
+              value={formData.categoryId}
+              onChange={(e) => handleChange('categoryId', e.target.value)}
+              required
             >
+              <option value="">Select Category...</option>
               {categories && categories.length > 0 ? (
                 categories.map(cat => (
-                  <option key={cat.id} value={cat.categoryName}>
+                  <option key={cat.id} value={cat.id}>
                     {cat.categoryName}
                   </option>
                 ))
               ) : (
-                <>
-                  <option value="Office Supplies">Office Supplies</option>
-                  <option value="Equipment">Equipment</option>
-                  <option value="Furniture">Furniture</option>
-                  <option value="Electronics">Electronics</option>
-                  <option value="Other">Other</option>
-                </>
+                <option disabled>No categories available</option>
               )}
             </Select>
           </div>
 
-          {/* ✅ REMOVED: Quantity and Reorder Level grid - Only showing Reorder Level now */}
+          {/* Reorder Level */}
           <div className="space-y-2">
             <Label htmlFor="quick-reorderLevel">Reorder Level</Label>
             <Input
@@ -119,13 +121,13 @@ export default function NewItemQuickAddDialog({
             {locations && locations.length > 0 ? (
               <Select
                 id="quick-location"
-                value={formData.location}
-                onChange={(e) => handleChange('location', e.target.value)}
+                value={formData.locationId}
+                onChange={(e) => handleChange('locationId', e.target.value)}
                 required
               >
                 <option value="">Select Location...</option>
                 {locations.map(location => (
-                  <option key={location.id} value={location.locationName}>
+                  <option key={location.id} value={location.id}>
                     {location.locationName}
                     {location.description && ` - ${location.description}`}
                   </option>
@@ -152,7 +154,7 @@ export default function NewItemQuickAddDialog({
             />
           </div>
 
-          {/* ✅ ADDED: Info message about quantity */}
+          {/* Info message about quantity */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <div className="flex gap-2">
               <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -176,7 +178,7 @@ export default function NewItemQuickAddDialog({
           </Button>
           <Button 
             onClick={handleSubmit}
-            disabled={!formData.location}
+            disabled={!formData.locationId || !formData.categoryId}
           >
             Add Item
           </Button>

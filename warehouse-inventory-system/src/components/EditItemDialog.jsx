@@ -1,3 +1,10 @@
+// ===================================================================
+// COMPONENT: EditItemDialog.jsx
+// STATUS: ✅ UPDATED for MySQL database
+// CHANGES: 
+// - Updated to work with category/location IDs
+// - Properly handles ID-based relationships
+// ===================================================================
 
 import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog'
@@ -5,8 +12,6 @@ import { Input } from './ui/input'
 import { Label } from './ui/label'
 import { Select } from './ui/select'
 import { Button } from './ui/button'
-
-const CATEGORIES = ['Office Supplies', 'Equipment', 'Furniture', 'Electronics', 'Other']
 
 export default function EditItemDialog({ 
   open, 
@@ -19,59 +24,62 @@ export default function EditItemDialog({
 }) {
   const [formData, setFormData] = useState({
     itemName: '',
-    category: 'Office Supplies',
+    categoryId: '',
     quantity: '',
-    location: '',
+    locationId: '',
     reorderLevel: '',
     price: '',
-    supplier: '',
     supplierId: null
   })
 
   useEffect(() => {
     if (item) {
+      // Find IDs from names if item has names instead of IDs
+      const category = categories.find(c => c.categoryName === item.category)
+      const location = locations.find(l => l.locationName === item.location)
+      
       setFormData({
         itemName: item.itemName || '',
-        category: item.category || 'Office Supplies',
+        categoryId: item.categoryId || category?.id || '',
         quantity: item.quantity?.toString() || '',
-        location: item.location || '',
+        locationId: item.locationId || location?.id || '',
         reorderLevel: item.reorderLevel?.toString() || '',
         price: item.price?.toString() || '',
-        supplier: item.supplier || '',
         supplierId: item.supplierId || null
       })
     }
-  }, [item])
+  }, [item, categories, locations])
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
-  const handleSupplierChange = (supplierId) => {
-    const selectedSupplier = suppliers.find(s => s.id === parseInt(supplierId))
-    if (selectedSupplier) {
-      setFormData(prev => ({
-        ...prev,
-        supplierId: selectedSupplier.id,
-        supplier: selectedSupplier.supplierName
-      }))
-    }
-  }
-
   const handleSubmit = (e) => {
     e.preventDefault()
     
-    if (!formData.itemName || !formData.quantity || !formData.location) {
+    if (!formData.itemName || !formData.quantity || !formData.locationId || !formData.categoryId) {
       alert('Please fill in all required fields')
       return
     }
 
+    // Get names for display
+    const category = categories.find(c => c.id === parseInt(formData.categoryId))
+    const location = locations.find(l => l.id === parseInt(formData.locationId))
+    const supplier = suppliers.find(s => s.id === parseInt(formData.supplierId))
+
     const updatedItem = {
       ...item,
-      ...formData,
+      itemName: formData.itemName,
+      categoryId: parseInt(formData.categoryId),
       quantity: parseInt(formData.quantity) || 0,
+      locationId: parseInt(formData.locationId),
       reorderLevel: parseInt(formData.reorderLevel) || 10,
-      price: parseFloat(formData.price) || 0
+      price: parseFloat(formData.price) || 0,
+      supplierId: formData.supplierId ? parseInt(formData.supplierId) : null,
+      // Include display names for immediate UI update
+      category: category?.categoryName || 'Other',
+      location: location?.locationName || 'Unknown',
+      supplier: supplier?.supplierName || null
     }
 
     onEdit(updatedItem)
@@ -101,20 +109,22 @@ export default function EditItemDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-category">Category</Label>
+              <Label htmlFor="edit-category">
+                Category <span className="text-red-500">*</span>
+              </Label>
               <Select
                 id="edit-category"
-                value={formData.category}
-                onChange={(e) => handleChange('category', e.target.value)}
+                value={formData.categoryId}
+                onChange={(e) => handleChange('categoryId', e.target.value)}
+                required
               >
+                <option value="">Select Category...</option>
                 {categories && categories.length > 0 ? (
                   categories.map(cat => (
-                    <option key={cat.id} value={cat.categoryName}>{cat.categoryName}</option>
+                    <option key={cat.id} value={cat.id}>{cat.categoryName}</option>
                   ))
                 ) : (
-                  CATEGORIES.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))
+                  <option disabled>No categories available</option>
                 )}
               </Select>
             </div>
@@ -124,7 +134,7 @@ export default function EditItemDialog({
               <Select
                 id="edit-supplier"
                 value={formData.supplierId || ''}
-                onChange={(e) => handleSupplierChange(e.target.value)}
+                onChange={(e) => handleChange('supplierId', e.target.value || null)}
               >
                 <option value="">Select Supplier...</option>
                 {suppliers && suppliers
@@ -173,13 +183,13 @@ export default function EditItemDialog({
               {locations && locations.length > 0 ? (
                 <Select
                   id="edit-location"
-                  value={formData.location}
-                  onChange={(e) => handleChange('location', e.target.value)}
+                  value={formData.locationId}
+                  onChange={(e) => handleChange('locationId', e.target.value)}
                   required
                 >
                   <option value="">Select Location...</option>
                   {locations.map(location => (
-                    <option key={location.id} value={location.locationName}>
+                    <option key={location.id} value={location.id}>
                       {location.locationName}
                       {location.description && ` - ${location.description}`}
                     </option>
@@ -187,7 +197,7 @@ export default function EditItemDialog({
                 </Select>
               ) : (
                 <div className="text-sm text-muted-foreground border rounded-lg p-3 bg-yellow-50">
-                  No locations available. Current: {formData.location}
+                  No locations available. Current location cannot be changed.
                 </div>
               )}
             </div>
