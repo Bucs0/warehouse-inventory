@@ -1,10 +1,12 @@
 // ===================================================================
-// UPDATED: src/components/Dashboard.jsx
-// CHANGES: Updated to use MySQL database for user approvals
-// - Fetch pending/approved users from database
-// - User approval/rejection updates database
-// - Activity logs synced to database
-// - Removed localStorage polling
+// COMPONENT: Dashboard.jsx
+// STATUS: ✅ UPDATED - Better error handling for database operations
+// CHANGES: 
+// - Added comprehensive error handling for all database operations
+// - Better loading states
+// - User feedback for success/error states
+// - Retry mechanism for failed operations
+// - Graceful degradation when API fails
 // ===================================================================
 
 import { useState, useEffect } from 'react'
@@ -19,6 +21,8 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
   const [pendingUsers, setPendingUsers] = useState([])
   const [approvedUsers, setApprovedUsers] = useState([])
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [successMessage, setSuccessMessage] = useState(null)
 
   // Load users from database
   useEffect(() => {
@@ -26,6 +30,8 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
       if (user.role !== 'Admin') return
       
       setIsLoading(true)
+      setError(null)
+
       try {
         const [pendingResult, approvedResult] = await Promise.all([
           usersAPI.getPending(),
@@ -41,6 +47,8 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
             role: u.role,
             signupDate: new Date(u.created_at).toLocaleDateString('en-PH')
           })))
+        } else {
+          console.error('Failed to load pending users:', pendingResult.error)
         }
 
         if (approvedResult.success) {
@@ -52,9 +60,12 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
             role: u.role,
             status: u.status
           })))
+        } else {
+          console.error('Failed to load approved users:', approvedResult.error)
         }
       } catch (error) {
         console.error('Error loading users:', error)
+        setError('Failed to load user data. Please try again.')
       } finally {
         setIsLoading(false)
       }
@@ -62,16 +73,28 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
     
     loadUsers()
     
-    // Poll for changes every 10 seconds
-    const interval = setInterval(loadUsers, 10000)
+    // Poll for changes every 30 seconds
+    const interval = setInterval(loadUsers, 30000)
     return () => clearInterval(interval)
   }, [user.role])
+
+  // Clear success message after 5 seconds
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        setSuccessMessage(null)
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [successMessage])
 
   const handleApproveUser = async (userId) => {
     const userToApprove = pendingUsers.find(u => u.id === userId)
     if (!userToApprove) return
 
     setIsLoading(true)
+    setError(null)
+
     try {
       const result = await usersAPI.approve(userId)
       
@@ -105,17 +128,24 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
         }
 
         // Log activity
-        await activityLogsAPI.add({
-          itemName: `User Account: ${userToApprove.name}`,
-          action: 'Added',
-          details: `Approved staff account for ${userToApprove.name} (@${userToApprove.username})`
-        }, user.id)
+        try {
+          await activityLogsAPI.add({
+            itemName: `User Account: ${userToApprove.name}`,
+            action: 'Added',
+            details: `Approved staff account for ${userToApprove.name} (@${userToApprove.username})`
+          }, user.id)
+        } catch (logError) {
+          console.error('Failed to log activity:', logError)
+          // Don't fail the whole operation if logging fails
+        }
 
-        alert(`✅ ${userToApprove.name} has been approved!`)
+        setSuccessMessage(`✅ ${userToApprove.name} has been approved successfully!`)
+      } else {
+        setError(`Failed to approve user: ${result.error || 'Unknown error'}`)
       }
     } catch (error) {
       console.error('Error approving user:', error)
-      alert('Failed to approve user')
+      setError('Failed to approve user. Please check your connection and try again.')
     } finally {
       setIsLoading(false)
     }
@@ -125,11 +155,13 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
     const userToReject = pendingUsers.find(u => u.id === userId)
     if (!userToReject) return
 
-    if (!window.confirm(`Are you sure you want to reject ${userToReject.name}'s signup request?`)) {
+    if (!window.confirm(`Are you sure you want to reject ${userToReject.name}'s signup request? This action cannot be undone.`)) {
       return
     }
 
     setIsLoading(true)
+    setError(null)
+
     try {
       const result = await usersAPI.reject(userId)
       
@@ -149,17 +181,66 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
         }
 
         // Log activity
-        await activityLogsAPI.add({
-          itemName: `User Account: ${userToReject.name}`,
-          action: 'Deleted',
-          details: `Rejected staff signup request from ${userToReject.name} (@${userToReject.username})`
-        }, user.id)
+        try {
+          await activityLogsAPI.add({
+            itemName: `User Account: ${userToReject.name}`,
+            action: 'Deleted',
+            details: `Rejected staff signup request from ${userToReject.name} (@${userToReject.username})`
+          }, user.id)
+        } catch (logError) {
+          console.error('Failed to log activity:', logError)
+          // Don't fail the whole operation if logging fails
+        }
 
-        alert(`${userToReject.name}'s request has been rejected`)
+        setSuccessMessage(`${userToReject.name}'s request has been rejected`)
+      } else {
+        setError(`Failed to reject user: ${result.error || 'Unknown error'}`)
       }
     } catch (error) {
       console.error('Error rejecting user:', error)
-      alert('Failed to reject user')
+      setError('Failed to reject user. Please check your connection and try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Retry loading users
+  const handleRetryLoadUsers = async () => {
+    setError(null)
+    setIsLoading(true)
+
+    try {
+      const [pendingResult, approvedResult] = await Promise.all([
+        usersAPI.getPending(),
+        usersAPI.getApproved()
+      ])
+
+      if (pendingResult.success) {
+        setPendingUsers(pendingResult.data.map(u => ({
+          id: u.id,
+          name: u.name,
+          username: u.username,
+          email: u.email,
+          role: u.role,
+          signupDate: new Date(u.created_at).toLocaleDateString('en-PH')
+        })))
+      }
+
+      if (approvedResult.success) {
+        setApprovedUsers(approvedResult.data.filter(u => u.role !== 'Admin').map(u => ({
+          id: u.id,
+          name: u.name,
+          username: u.username,
+          email: u.email,
+          role: u.role,
+          status: u.status
+        })))
+      }
+
+      setSuccessMessage('✅ User data reloaded successfully!')
+    } catch (error) {
+      console.error('Error retrying load:', error)
+      setError('Still unable to load user data. Please check your server connection.')
     } finally {
       setIsLoading(false)
     }
@@ -175,6 +256,31 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
 
   return (
     <div className="space-y-6">
+      {/* Success Message */}
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-center gap-2">
+          <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>{successMessage}</span>
+        </div>
+      )}
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>{error}</span>
+          </div>
+          <Button size="sm" variant="outline" onClick={handleRetryLoadUsers}>
+            Retry
+          </Button>
+        </div>
+      )}
+
       {/* Welcome header */}
       <div className="flex items-center justify-between">
         <div>

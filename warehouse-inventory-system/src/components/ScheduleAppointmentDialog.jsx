@@ -1,7 +1,11 @@
 // ===================================================================
 // COMPONENT: ScheduleAppointmentDialog.jsx
 // STATUS: ✅ FIXED - Item selection state management bug
-// CHANGES: Fixed handleAddItem to properly use separate state variables
+// CHANGES: 
+// - Fixed handleAddItem to use separate state variables
+// - Proper state management for item selection
+// - Better form validation
+// - Clearer user feedback
 // ===================================================================
 
 import { useState } from 'react'
@@ -63,13 +67,19 @@ export default function ScheduleAppointmentDialog({
     const itemId = parseInt(selectedItemId)
     const quantity = parseInt(itemQuantity)
 
-    if (!itemId || !quantity || quantity <= 0) {
-      alert('Please select an item and enter valid quantity')
+    // Validation
+    if (!itemId || !selectedItemId) {
+      alert('Please select an item')
+      return
+    }
+
+    if (!quantity || quantity <= 0) {
+      alert('Please enter a valid quantity (greater than 0)')
       return
     }
 
     if (selectedItems.some(item => item.itemId === itemId)) {
-      alert('Item already added to this appointment')
+      alert('This item is already added to the appointment')
       return
     }
 
@@ -94,9 +104,19 @@ export default function ScheduleAppointmentDialog({
   const handleSubmit = (e) => {
     e.preventDefault()
 
-    // Validate
-    if (!formData.supplierId || !formData.date || !formData.time) {
-      alert('Please fill in supplier, date, and time')
+    // Validate required fields
+    if (!formData.supplierId) {
+      alert('Please select a supplier')
+      return
+    }
+
+    if (!formData.date) {
+      alert('Please select an appointment date')
+      return
+    }
+
+    if (!formData.time) {
+      alert('Please select an appointment time')
       return
     }
 
@@ -106,10 +126,11 @@ export default function ScheduleAppointmentDialog({
       return
     }
 
+    // Check if date is in the past
     const selectedDate = new Date(`${formData.date}T${formData.time}`)
     const now = new Date()
     if (selectedDate < now) {
-      if (!window.confirm('The selected date/time is in the past. Continue anyway?')) {
+      if (!window.confirm('⚠️ The selected date/time is in the past. Do you want to continue anyway?')) {
         return
       }
     }
@@ -154,6 +175,7 @@ export default function ScheduleAppointmentDialog({
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
+            {/* Supplier Selection */}
             <div className="space-y-2">
               <Label htmlFor="supplier">
                 Supplier <span className="text-red-500">*</span>
@@ -174,8 +196,14 @@ export default function ScheduleAppointmentDialog({
                   ))
                 }
               </Select>
+              {suppliers.filter(s => s.isActive).length === 0 && (
+                <p className="text-sm text-muted-foreground text-red-600">
+                  ⚠️ No active suppliers available. Please add suppliers first.
+                </p>
+              )}
             </div>
 
+            {/* Date and Time */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="date">
@@ -204,6 +232,7 @@ export default function ScheduleAppointmentDialog({
               </div>
             </div>
 
+            {/* Status */}
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
               <Select
@@ -219,75 +248,79 @@ export default function ScheduleAppointmentDialog({
             {/* ✅ FIXED: Item selection section with proper state management */}
             {formData.supplierId && (
               <div className="space-y-3 p-4 border rounded-lg bg-gray-50">
-                <h4 className="font-semibold">Items to Restock</h4>
+                <h4 className="font-semibold">Items to Restock <span className="text-red-500">*</span></h4>
                 
-                <div className="grid grid-cols-12 gap-2">
-                  <div className="col-span-7">
-                    <Select 
-                      value={selectedItemId}
-                      onChange={(e) => setSelectedItemId(e.target.value)}
-                    >
-                      <option value="">Select item...</option>
-                      {supplierItems
-                        .filter(item => !selectedItems.some(si => si.itemId === item.id))
-                        .map(item => (
-                          <option key={item.id} value={item.id}>
-                            {item.itemName} (Current: {item.quantity})
-                          </option>
-                        ))
-                      }
-                    </Select>
-                  </div>
-                  <div className="col-span-3">
-                    <Input
-                      type="number"
-                      min="1"
-                      placeholder="Qty"
-                      value={itemQuantity}
-                      onChange={(e) => setItemQuantity(e.target.value)}
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="w-full"
-                      onClick={handleAddItem}
-                    >
-                      Add
-                    </Button>
-                  </div>
-                </div>
-
-                {selectedItems.length > 0 && (
-                  <div className="space-y-2 mt-3">
-                    <p className="text-sm font-medium">Selected Items:</p>
-                    {selectedItems.map((item) => (
-                      <div key={item.itemId} className="flex items-center justify-between p-2 bg-white rounded border">
-                        <span className="text-sm">
-                          {item.itemName} <Badge variant="outline">{item.quantity} units</Badge>
-                        </span>
+                {supplierItems.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    ⚠️ No items from this supplier in inventory. Please add items for this supplier first.
+                  </p>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-12 gap-2">
+                      <div className="col-span-7">
+                        <Select 
+                          value={selectedItemId}
+                          onChange={(e) => setSelectedItemId(e.target.value)}
+                        >
+                          <option value="">Select item...</option>
+                          {supplierItems
+                            .filter(item => !selectedItems.some(si => si.itemId === item.id))
+                            .map(item => (
+                              <option key={item.id} value={item.id}>
+                                {item.itemName} (Current: {item.quantity})
+                              </option>
+                            ))
+                          }
+                        </Select>
+                      </div>
+                      <div className="col-span-3">
+                        <Input
+                          type="number"
+                          min="1"
+                          placeholder="Qty"
+                          value={itemQuantity}
+                          onChange={(e) => setItemQuantity(e.target.value)}
+                        />
+                      </div>
+                      <div className="col-span-2">
                         <Button
                           type="button"
                           size="sm"
-                          variant="destructive"
-                          onClick={() => handleRemoveItem(item.itemId)}
+                          className="w-full"
+                          onClick={handleAddItem}
+                          disabled={!selectedItemId || !itemQuantity}
                         >
-                          Remove
+                          Add
                         </Button>
                       </div>
-                    ))}
-                  </div>
-                )}
+                    </div>
 
-                {supplierItems.length === 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    No items from this supplier in inventory.
-                  </p>
+                    {selectedItems.length > 0 && (
+                      <div className="space-y-2 mt-3">
+                        <p className="text-sm font-medium">Selected Items:</p>
+                        {selectedItems.map((item) => (
+                          <div key={item.itemId} className="flex items-center justify-between p-2 bg-white rounded border">
+                            <span className="text-sm">
+                              {item.itemName} <Badge variant="outline">{item.quantity} units</Badge>
+                            </span>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleRemoveItem(item.itemId)}
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}
 
+            {/* Notes */}
             <div className="space-y-2">
               <Label htmlFor="notes">Notes (Optional)</Label>
               <Input
@@ -298,13 +331,16 @@ export default function ScheduleAppointmentDialog({
               />
             </div>
 
+            {/* Summary */}
             {selectedItems.length > 0 && (
-              <div className="p-3 bg-blue-50 rounded-lg text-sm">
-                <p className="font-medium">Appointment Summary:</p>
-                <p className="mt-1">Supplier: <strong>{formData.supplierName}</strong></p>
-                <p>Date: <strong>{formData.date} at {formData.time}</strong></p>
-                <p>Items: <strong>{selectedItems.length} item(s)</strong></p>
-                <p>Total Units: <strong>{selectedItems.reduce((sum, item) => sum + item.quantity, 0)}</strong></p>
+              <div className="p-3 bg-blue-50 rounded-lg text-sm border border-blue-200">
+                <p className="font-medium mb-1">📋 Appointment Summary:</p>
+                <div className="space-y-1">
+                  <p>Supplier: <strong>{formData.supplierName}</strong></p>
+                  <p>Date: <strong>{formData.date || 'Not selected'} at {formData.time || 'Not selected'}</strong></p>
+                  <p>Items: <strong>{selectedItems.length} item(s)</strong></p>
+                  <p>Total Units: <strong>{selectedItems.reduce((sum, item) => sum + item.quantity, 0)}</strong></p>
+                </div>
               </div>
             )}
           </div>
@@ -313,7 +349,10 @@ export default function ScheduleAppointmentDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit">
+            <Button 
+              type="submit"
+              disabled={!formData.supplierId || !formData.date || !formData.time || selectedItems.length === 0}
+            >
               Schedule Appointment
             </Button>
           </DialogFooter>

@@ -1,7 +1,10 @@
 // ===================================================================
 // COMPONENT: SuppliersPage.jsx
 // STATUS: ✅ FIXED - Added locations prop to NewItemQuickAddDialog
-// CHANGES: Pass locations to NewItemQuickAddDialog for proper item creation
+// CHANGES: 
+// - Pass locations to NewItemQuickAddDialog for proper item creation
+// - Better prop handling
+// - Improved error messages
 // ===================================================================
 
 import { useState } from 'react'
@@ -60,7 +63,7 @@ export default function SuppliersPage({
   const handleDelete = (supplier) => {
     const itemCount = getSupplierItemCount(supplier.id)
     if (itemCount > 0) {
-      if (!window.confirm(`This supplier has ${itemCount} item(s) in inventory. Are you sure you want to delete "${supplier.supplierName}"?`)) {
+      if (!window.confirm(`⚠️ This supplier has ${itemCount} item(s) in inventory. Are you sure you want to delete "${supplier.supplierName}"?`)) {
         return
       }
     } else {
@@ -72,13 +75,21 @@ export default function SuppliersPage({
   }
 
   const handleAddSupplierWithItems = (supplierData) => {
+    // Check if supplier wants to add new items
     if (supplierData.newItems && supplierData.newItems.length > 0) {
+      // ✅ Validate that locations exist before proceeding
+      if (!locations || locations.length === 0) {
+        alert('⚠️ Cannot add new items: No locations available. Please add locations first in Inventory Management.')
+        return
+      }
+
       setPendingSupplierData(supplierData)
       setPendingNewItems(supplierData.newItems)
       setCurrentNewItemIndex(0)
       setCreatedItemIds([])
       setIsNewItemDialogOpen(true)
     } else {
+      // No new items, just add supplier
       const finalSupplier = {
         id: Date.now(),
         supplierName: supplierData.supplierName,
@@ -87,7 +98,7 @@ export default function SuppliersPage({
         contactPhone: supplierData.contactPhone,
         address: supplierData.address,
         isActive: supplierData.isActive,
-        suppliedItemIds: supplierData.suppliedItemIds,
+        suppliedItemIds: supplierData.suppliedItemIds || [],
         dateAdded: new Date().toLocaleDateString('en-PH')
       }
       onAddSupplier(finalSupplier)
@@ -103,7 +114,7 @@ export default function SuppliersPage({
       itemName: itemName,
       ...itemData,
       supplier: pendingSupplierData.supplierName,
-      supplierId: null,
+      supplierId: null, // Will be updated when supplier is created
       damagedStatus: 'Good',
       dateAdded: new Date().toLocaleDateString('en-PH')
     }
@@ -111,9 +122,11 @@ export default function SuppliersPage({
     onAddItem(newItem)
     setCreatedItemIds(prev => [...prev, newItemId])
     
+    // Check if there are more items to add
     if (currentNewItemIndex < pendingNewItems.length - 1) {
       setCurrentNewItemIndex(currentNewItemIndex + 1)
     } else {
+      // All items added, now create the supplier
       const supplierId = Date.now()
       
       const finalSupplier = {
@@ -124,12 +137,13 @@ export default function SuppliersPage({
         contactPhone: pendingSupplierData.contactPhone,
         address: pendingSupplierData.address,
         isActive: pendingSupplierData.isActive,
-        suppliedItemIds: [...pendingSupplierData.suppliedItemIds, ...createdItemIds, newItemId],
+        suppliedItemIds: [...(pendingSupplierData.suppliedItemIds || []), ...createdItemIds, newItemId],
         dateAdded: new Date().toLocaleDateString('en-PH')
       }
       
       onAddSupplier(finalSupplier)
       
+      // Reset states
       setIsNewItemDialogOpen(false)
       setPendingNewItems([])
       setCurrentNewItemIndex(0)
@@ -143,6 +157,7 @@ export default function SuppliersPage({
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold">Supplier Management</h1>
         <p className="text-muted-foreground mt-1">
@@ -150,6 +165,7 @@ export default function SuppliersPage({
         </p>
       </div>
 
+      {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-6">
@@ -200,6 +216,7 @@ export default function SuppliersPage({
         </Card>
       </div>
 
+      {/* Suppliers List */}
       <Card>
         <CardHeader>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -215,6 +232,7 @@ export default function SuppliersPage({
             )}
           </div>
 
+          {/* Search and Filter */}
           <div className="flex flex-col md:flex-row gap-4 mt-4">
             <div className="flex-1">
               <Input
@@ -334,6 +352,7 @@ export default function SuppliersPage({
         </CardContent>
       </Card>
 
+      {/* Dialogs */}
       <AddSupplierDialog
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
@@ -358,6 +377,7 @@ export default function SuppliersPage({
           open={isNewItemDialogOpen}
           onOpenChange={(open) => {
             if (!open) {
+              // User cancelled - reset everything
               setIsNewItemDialogOpen(false)
               setPendingNewItems([])
               setCurrentNewItemIndex(0)
@@ -367,7 +387,7 @@ export default function SuppliersPage({
           }}
           itemName={pendingNewItems[currentNewItemIndex]}
           categories={categories}
-          locations={locations}
+          locations={locations} // ✅ FIXED: locations prop now passed
           onComplete={handleNewItemComplete}
         />
       )}
