@@ -1,97 +1,167 @@
-
+// ===================================================================
+// UPDATED: src/components/Dashboard.jsx
+// CHANGES: Updated to use MySQL database for user approvals
+// - Fetch pending/approved users from database
+// - User approval/rejection updates database
+// - Activity logs synced to database
+// - Removed localStorage polling
+// ===================================================================
 
 import { useState, useEffect } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog'
+import { usersAPI, activityLogsAPI } from '../lib/api'
 
-export default function Dashboard({ user, inventoryData, activityLogs, onNavigate, onLogActivity }) {
+export default function Dashboard({ user, inventoryData, activityLogs, onNavigate }) {
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false)
   const [pendingUsers, setPendingUsers] = useState([])
   const [approvedUsers, setApprovedUsers] = useState([])
+  const [isLoading, setIsLoading] = useState(false)
 
-  // Load users from localStorage
+  // Load users from database
   useEffect(() => {
-    const loadUsers = () => {
-      const savedPending = localStorage.getItem('pendingUsers')
-      const savedApproved = localStorage.getItem('approvedUsers')
+    const loadUsers = async () => {
+      if (user.role !== 'Admin') return
       
-      if (savedPending) setPendingUsers(JSON.parse(savedPending))
-      if (savedApproved) setApprovedUsers(JSON.parse(savedApproved))
+      setIsLoading(true)
+      try {
+        const [pendingResult, approvedResult] = await Promise.all([
+          usersAPI.getPending(),
+          usersAPI.getApproved()
+        ])
+
+        if (pendingResult.success) {
+          setPendingUsers(pendingResult.data.map(u => ({
+            id: u.id,
+            name: u.name,
+            username: u.username,
+            email: u.email,
+            role: u.role,
+            signupDate: new Date(u.created_at).toLocaleDateString('en-PH')
+          })))
+        }
+
+        if (approvedResult.success) {
+          setApprovedUsers(approvedResult.data.filter(u => u.role !== 'Admin').map(u => ({
+            id: u.id,
+            name: u.name,
+            username: u.username,
+            email: u.email,
+            role: u.role,
+            status: u.status
+          })))
+        }
+      } catch (error) {
+        console.error('Error loading users:', error)
+      } finally {
+        setIsLoading(false)
+      }
     }
     
     loadUsers()
     
-    // Poll for changes every 2 seconds
-    const interval = setInterval(loadUsers, 2000)
+    // Poll for changes every 10 seconds
+    const interval = setInterval(loadUsers, 10000)
     return () => clearInterval(interval)
-  }, [])
+  }, [user.role])
 
-  // Save users to localStorage
-  useEffect(() => {
-    localStorage.setItem('pendingUsers', JSON.stringify(pendingUsers))
-  }, [pendingUsers])
-
-  useEffect(() => {
-    localStorage.setItem('approvedUsers', JSON.stringify(approvedUsers))
-  }, [approvedUsers])
-
-  const handleApproveUser = (userId) => {
+  const handleApproveUser = async (userId) => {
     const userToApprove = pendingUsers.find(u => u.id === userId)
-    if (userToApprove) {
-      const approvedUser = { ...userToApprove, status: 'approved' }
-      setApprovedUsers([...approvedUsers, approvedUser])
-      setPendingUsers(pendingUsers.filter(u => u.id !== userId))
+    if (!userToApprove) return
 
-      //ADD TO ACTIVITY LOGS
-      if (onLogActivity) {
-        onLogActivity({
-          id: Date.now(),
+    setIsLoading(true)
+    try {
+      const result = await usersAPI.approve(userId)
+      
+      if (result.success) {
+        // Reload users
+        const [pendingResult, approvedResult] = await Promise.all([
+          usersAPI.getPending(),
+          usersAPI.getApproved()
+        ])
+
+        if (pendingResult.success) {
+          setPendingUsers(pendingResult.data.map(u => ({
+            id: u.id,
+            name: u.name,
+            username: u.username,
+            email: u.email,
+            role: u.role,
+            signupDate: new Date(u.created_at).toLocaleDateString('en-PH')
+          })))
+        }
+
+        if (approvedResult.success) {
+          setApprovedUsers(approvedResult.data.filter(u => u.role !== 'Admin').map(u => ({
+            id: u.id,
+            name: u.name,
+            username: u.username,
+            email: u.email,
+            role: u.role,
+            status: u.status
+          })))
+        }
+
+        // Log activity
+        await activityLogsAPI.add({
           itemName: `User Account: ${userToApprove.name}`,
           action: 'Added',
-          userName: user.name,
-          userRole: user.role,
-          timestamp: new Date().toLocaleString('en-PH', {
-            month: '2-digit',
-            day: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-          }),
           details: `Approved staff account for ${userToApprove.name} (@${userToApprove.username})`
-        })
+        }, user.id)
+
+        alert(`✅ ${userToApprove.name} has been approved!`)
       }
+    } catch (error) {
+      console.error('Error approving user:', error)
+      alert('Failed to approve user')
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const handleRejectUser = (userId) => {
+  const handleRejectUser = async (userId) => {
     const userToReject = pendingUsers.find(u => u.id === userId)
-    if (userToReject) {
-      if (window.confirm(`Are you sure you want to reject ${userToReject.name}'s signup request?`)) {
-        setPendingUsers(pendingUsers.filter(u => u.id !== userId))
+    if (!userToReject) return
 
-        //ADD TO ACTIVITY LOGS
-        if (onLogActivity) {
-          onLogActivity({
-            id: Date.now(),
-            itemName: `User Account: ${userToReject.name}`,
-            action: 'Deleted',
-            userName: user.name,
-            userRole: user.role,
-            timestamp: new Date().toLocaleString('en-PH', {
-              month: '2-digit',
-              day: '2-digit',
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: true
-            }),
-            details: `Rejected staff signup request from ${userToReject.name} (@${userToReject.username})`
-          })
+    if (!window.confirm(`Are you sure you want to reject ${userToReject.name}'s signup request?`)) {
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const result = await usersAPI.reject(userId)
+      
+      if (result.success) {
+        // Reload pending users
+        const pendingResult = await usersAPI.getPending()
+        
+        if (pendingResult.success) {
+          setPendingUsers(pendingResult.data.map(u => ({
+            id: u.id,
+            name: u.name,
+            username: u.username,
+            email: u.email,
+            role: u.role,
+            signupDate: new Date(u.created_at).toLocaleDateString('en-PH')
+          })))
         }
+
+        // Log activity
+        await activityLogsAPI.add({
+          itemName: `User Account: ${userToReject.name}`,
+          action: 'Deleted',
+          details: `Rejected staff signup request from ${userToReject.name} (@${userToReject.username})`
+        }, user.id)
+
+        alert(`${userToReject.name}'s request has been rejected`)
       }
+    } catch (error) {
+      console.error('Error rejecting user:', error)
+      alert('Failed to reject user')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -116,12 +186,12 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
         </div>
         
         <div className="flex gap-2">
-          {/*Show approval button with badge */}
           {user.role === 'Admin' && (
             <Button 
               variant="outline"
               onClick={() => setIsApprovalDialogOpen(true)}
               className="relative"
+              disabled={isLoading}
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -133,7 +203,6 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
             </Button>
           )}
           
-          {/* Admin: Show "View Full Inventory" button */}
           {user.role === 'Admin' && (
             <Button variant="outline" onClick={() => onNavigate('inventory')}>
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -324,6 +393,7 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
                           size="sm"
                           onClick={() => handleApproveUser(pendingUser.id)}
                           className="bg-green-600 hover:bg-green-700"
+                          disabled={isLoading}
                         >
                           <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -334,6 +404,7 @@ export default function Dashboard({ user, inventoryData, activityLogs, onNavigat
                           size="sm"
                           variant="destructive"
                           onClick={() => handleRejectUser(pendingUser.id)}
+                          disabled={isLoading}
                         >
                           <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
